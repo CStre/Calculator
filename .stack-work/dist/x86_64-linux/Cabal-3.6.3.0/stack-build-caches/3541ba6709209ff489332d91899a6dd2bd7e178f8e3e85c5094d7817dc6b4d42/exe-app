@@ -1,0 +1,16 @@
+/home/streitmancm/.ghcup/ghc/9.2.5/lib/ghc-9.2.5/include/ghcversion.h:
+  hash: 8ef6e3cecb29aca3884134f57ae55f780b89ff0e4491f9e76cec81b39be34fe6
+/home/streitmancm/project/calculator/.stack-work/dist/x86_64-linux/Cabal-3.6.3.0/build/app/autogen/Paths_monomer_starter.hs:
+  hash: 46a7b3729a225d233cf16ed8a4f53e9167db8f1f8d80d8ed3e5a7df29f7e5308
+/home/streitmancm/project/calculator/.stack-work/dist/x86_64-linux/Cabal-3.6.3.0/build/app/autogen/cabal_macros.h:
+  hash: 33d84107a1e02da0da3d202adf4b0fe25c333677a43523e49c700cbbd7a71de1
+/home/streitmancm/project/calculator/README.md:
+  hash: 1d6cf2b93321175aaedacb2a4cea3033bec26bbabedc00742adef36a0f783431
+/home/streitmancm/project/calculator/monomer-starter.cabal:
+  hash: 14383bd07cdb67a1da3673e0399b8f55ce970057ceeb54621f37430f836b84c1
+/home/streitmancm/project/calculator/package.yaml:
+  hash: e72bb2a6bdc91a97957bd068dd86b4abf36386612965fae74ffbc670494e44ab
+/home/streitmancm/project/calculator/src/Main.hs:
+  hash: e321e9600a2521a5107f3a67ec5e16cb0fde5e782dad905cd8cf2803c882bf26
+/usr/include/stdc-predef.h:
+  hash: cb08cd5d4cc059a90833ac48a284d25016e8d56ded8ad4cd98d8ac59cc5053f3
