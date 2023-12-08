@@ -1,0 +1,9 @@
+log(log(log(ln(5), 6), 8), 6)
+eeeeeeeeeee
+eeeeabs(5)
+566
+566.3
+6.3+3.2+6
+.3
+.8
+.
