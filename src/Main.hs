@@ -1,78 +1,271 @@
+{-
+   File: Calculator.hs
+   Description: A calculator application in Haskell using the Monomer library.
+   Author: Collin Streitman
+   Date: 12-8-2023
+   Version: 1.1.0
+   How to Run: Use the following commands to build and run the application:
+              1. stack build
+              2. .stack-work/dist/x86_64-linux/Cabal-3.6.3.0/build/app/app
+-}
+
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Main where
 
+{-
+-----------------------------------------------------------------------------
+                            -- File Imports --
+
+1.  Used for the `makeLenses` and `^.`
+2.  Used for manipulating Text values in AppModel and various functions
+3.  Main library for GUI
+4.  Not directly used, a dependency of another import
+5.  Used in 'tokenize' for 'isDigit', 'isSpace'
+6.  Used in 'navigateHistory' for 'fromMaybe'
+7.  Used in 'evaluateExpression' for 'readMaybe'
+8.  Used in 'isError', 'replace', and 'navigateHistory' for list manipulations
+9.  Used in 'delay'
+10. Used in 'handleEvent' for 'liftIO'
+11. Used in 'appendToFile', 'readValidInputs'
+12. Used in 'appendToFile', 'readValidInputs'
+13. Used in 'readValidInputs'
+14. Not directly used, could be a dependency of another import
+15. Used in 'readValidInputs'
+16. Used for GUI combinators
+17. Used for GUI combinators
+18. Used for styling in GUI functions
+19. Used for lens operations in Monomer
+20. Not directly used, could be a dependency of another import
+21. Used in 'appendToFile', 'readValidInputs'
+22. Used in 'appendToFile', 'readValidInputs'
+-----------------------------------------------------------------------------
+-}
+
+-- 1
 import Control.Lens
+-- 2
 import Data.Text (Text, pack, unpack, center)
+-- 3
 import Monomer
+-- 4
 import TextShow
+-- 5
 import Data.Char
+-- 6
 import Data.Maybe
+-- 7
 import Text.Read
+-- 8
 import Data.List
--- For the dynamic error messages
+-- 9
 import Control.Concurrent (threadDelay)
+-- 10
 import Control.Monad.IO.Class (liftIO)
--- For the history function
+-- 11
 import System.IO
+-- 12
 import Control.Monad
+-- 13
 import Control.Exception
+-- 14
 import System.IO.Unsafe (unsafePerformIO)
+-- 15
 import Control.DeepSeq (deepseq)
+-- 16
 import Monomer.Core.Combinators
-
+-- 17
 import Data.List.Split (splitOn)
+-- 18
 import Monomer.Core.Style (TextStyle)
-
-
+-- 19
 import qualified Monomer.Lens as L
+-- 20
 import Monomer.Event.Lens (HasRightShift(rightShift))
-
+-- 21
 import System.Directory (doesFileExist)
+-- 22
 import System.IO (writeFile)
 
+{-
+-----------------------------------------------------------------------------
+                            -- AppModel --
 
-
--- Define the application model and events
+1.  AppModel represents the state of the application. In the context of this 
+    calculator application, it specifically keeps track of the user's input at 
+    any given moment.
+2.  The model is integral to the operation of the Monomer library, which is 
+    used for building the GUI. Monomer operates in a reactive manner, where 
+    changes in the model trigger updates in the user interface.
+-----------------------------------------------------------------------------
+-}
 newtype AppModel = AppModel {
   _currentInput :: Text
 } deriving (Eq, Show)
 
 makeLenses 'AppModel
 
-data AppEvent = AddDigit Char
-              | AddOperation Char
-              | AddFunction String
-              | Calculate
-              | Clear
-              | TimerEvent
-              | NoOp
-              | ClearMem
-              | HistoryUp
-              | HistoryDown
-              | ToggleFun
-              | SetInput String
+{-
+-----------------------------------------------------------------------------
+                            -- AppEvent --
+
+1.  AddDigit Char:      
+        Represents an event where a digit is added to the current 
+        expression. The Char parameter signifies the digit to be 
+        added.
+
+2.  AddOperation Char:  
+        Corresponds to an event where an arithmetic operation 
+        (like +, -, ×, ÷) is added to the expression. The operation 
+        is passed as a Char.
+
+3.  AddFunction String: 
+        This event is triggered when a mathematical function (like 
+        sin, cos, log) is added. The specific function is 
+        represented as a String.   
+
+4.  Calculate:          
+        Signifies an event to perform the calculation based on 
+        the current input or expression.
+
+5.  Clear:          
+        Indicates an event to clear the current input or reset 
+        the calculator.
+
+6.  TimerEvent:         
+        Used for events that are based on a timer, for handling 
+        timeouts or delays in the application.
+
+7.  NoOp:               
+        Represents a "no operation" event, essentially an event 
+        where nothing happens. It can be useful for default cases 
+        or as a placeholder.
+
+8.  ClearMem:                   
+        This event corresponds to clearing stored memory or 
+        history in the calculator.
+
+9.  HistoryUp and HistoryDown:  
+        These events are used for navigating through the 
+        history of calculations or inputs.
+
+10. ToggleFun:                  
+        This is an event to toggle a special mode in the 
+        calculator, a more advanced alternate set of 
+        functionalities.
+
+11. SetInput String:            
+        Represents an event to set the calculator's 
+        input to a specific string value.
+
+-----------------------------------------------------------------------------
+-}
+
+data AppEvent = AddDigit Char       --Number 1
+              | AddOperation Char   --Number 2
+              | AddFunction String  --Number 3
+              | Calculate           --Number 4
+              | Clear               --Number 5
+              | TimerEvent          --Number 6
+              | NoOp                --Number 7
+              | ClearMem            --Number 8
+              | HistoryUp           --Number 9
+              | HistoryDown         --Number 9
+              | ToggleFun           --Number 10
+              | SetInput String     --Number 11
   deriving (Eq, Show)
 
--- Token and utility functions for expression parsing
-data Token = Num Double
-          | Op Char
-          | Sqrt
-          | Cos
-          | Tan
-          | Sin
-          | Log
-          | Ln
-          | E
-          | Abs
-          | Comma
-          | Pi
-          | Exp
-          | Fact
-          | Mod
-          | ErrorToken String
+{-
+-----------------------------------------------------------------------------
+                            -- Token --
+
+1.  Num Double: 
+        Represents a numerical value. The Double type is used to handle floating-point 
+        numbers, allowing for both integers and decimals in the calculations.
+
+2.	Op Char: 
+        Represents an operator. The Char value could be any character representing 
+        an arithmetic operation, such as '+', '-', '×', '÷', etc.
+
+3.	Sqrt: 
+        Symbolizes the square root operation. It indicates that a square root 
+        function will be applied to a subsequent numerical value or expression.
+
+4.	Cos, Tan, Sin: 
+        Represent the trigonometric functions cosine, tangent, and sine, 
+        respectively. These are used to perform trigonometric calculations on
+        numbers or expressions that follow.
+
+5.	Log, Ln: 
+        Stand for logarithmic functions. Log typically represents a logarithm with 
+        a base of 10, whereas Ln is the natural logarithm (base e).
+
+6.	E: 
+        Represents the mathematical constant e (approximately 2.71828), which is 
+        the base of the natural logarithm.
+
+7.	Abs: 
+        Represents the absolute value function, used to return the absolute 
+        (non-negative) value of a number or expression.
+
+8.	Comma: 
+        Used as a delimiter, primarily in functions that require more than one 
+        argument, like the logarithm with a specific base (Log).
+
+9.	Pi: 
+        Represents the mathematical constant π (Pi).
+
+10.	Exp: 
+        Symbolizes the exponentiation operation. It is used to raise a number 
+        to the power of another number.
+
+11.	Fact: 
+        Represents the factorial operation, denoted as '!'. It is used to 
+        calculate the factorial of a number.
+
+12.	Mod: 
+        Represents the modulo operation, denoted as '%'. It calculates the 
+        remainder of the division of one number by another.
+
+13.	ErrorToken String: 
+        Used to handle errors in parsing or interpreting the expression. The String 
+        contains an error message describing the nature of the error.
+
+-----------------------------------------------------------------------------
+-}
+
+data Token = Num Double      --Number 1
+          | Op Char          --Number 2
+          | Sqrt             --Number 3
+          | Cos              --Number 4
+          | Tan              --Number 4
+          | Sin              --Number 4
+          | Log              --Number 5
+          | Ln               --Number 5
+          | E                --Number 6
+          | Abs              --Number 7
+          | Comma            --Number 8
+          | Pi               --Number 9
+          | Exp              --Number 10
+          | Fact             --Number 11
+          | Mod              --Number 12
+          | ErrorToken String--Number 13
     deriving Show
+
+{-
+-----------------------------------------------------------------------------
+                            -- Tokenize --
+
+The tokenize function takes a String as input and converts it into a list of 
+Token elements, each representing a distinct component of a mathematical 
+expression, such as numbers, operators, and functions. It uses pattern matching 
+and string manipulation to accurately identify and classify each part of the 
+input string into the appropriate token type for further processing in the 
+application.
+
+-----------------------------------------------------------------------------
+-}
 
 tokenize :: String -> [Token]
 tokenize [] = []
@@ -101,16 +294,71 @@ tokenize str@(c:cs)
     | take 1 str == "!"     = Fact  : tokenize (drop 1 str)
     | otherwise = [ErrorToken "[Error 201]: Unrecognized input symbol and not able to tokenize"] -- ErrorToken is a new constructor in Token data type
 
--- Evaluate a list of tokens
+{-
+-----------------------------------------------------------------------------
+                    -- Expression Evaluation (PARSER) --
+
+1.  eval :: [Token] -> String
+
+    The eval function is responsible for evaluating a list of tokens that 
+    represent a mathematical expression. It takes a list of Token as input 
+    and returns a String as output. The function first parses the expression 
+    using parseExpr and then formats the output using formatOutput. It also 
+    handles error tokens by returning appropriate error messages, ensuring 
+    that any syntactical or operational errors in the expression are reported 
+    back to the user.
+
+2. parseExpr :: [Token] -> (Double, [Token])
+
+    The parseExpr function is a key component responsible for parsing and 
+    evaluating mathematical expressions represented as a list of tokens. It 
+    serves as the entry point to the expression evaluation logic, starting 
+    with the highest precedence operation (addition and subtraction in this 
+    case) and delegating to more specific parsing functions like parseSum, 
+    parseProduct, and parseFactor. This function utilizes a recursive 
+    approach to handle complex, nested expressions, ensuring correct 
+    evaluation order and handling of different mathematical operations and 
+    functions.
+
+3. parseSum :: [Token] -> (Double, [Token])
+
+    The parseSum function is designed to parse and evaluate addition and subtraction 
+    operations within a mathematical expression. It operates on a list of tokens, 
+    identifying and processing tokens that represent addition (+) and subtraction (-) 
+    operations according to their precedence in the expression. The function 
+    recursively computes the sum or difference of the numerical values
+
+4. parseProduct :: [Token] -> (Double, [Token])
+    
+    The parseProduct function handles the parsing and evaluation of multiplication 
+    and division operations within a mathematical expression. It processes a list 
+    of tokens (representing the expression) and identifies multiplication (×), 
+    division (÷), and modulo (%) operations.
+
+5. parseFactor :: [Token] -> (Double, [Token])
+    
+    The parseFactor function is responsible for parsing and evaluating the 
+    lowest level of expressions in a mathematical calculation, “Factors". It 
+    handles a variety of inputs, including numbers, parentheses, mathematical 
+    constants (like π and e), unary operations (like factorial and square 
+    root), and implicit multiplication.
+
+
+-----------------------------------------------------------------------------
+-}
+
+-- Expression Number 1
 eval :: [Token] -> String
 eval tokens = case parseExpr tokens of
   (result, []) -> formatOutput result
   (_, ErrorToken msg : _) -> msg -- Properly handle ErrorToken
   _ -> "[Error 100]: Incorrect Syntax with operation usage"
 
+-- Expression Number 2
 parseExpr :: [Token] -> (Double, [Token])
 parseExpr = parseSum  -- As the highest level of precedence
 
+-- Expression Number 3
 -- Handle addition and subtraction
 parseSum :: [Token] -> (Double, [Token])
 parseSum tokens =
@@ -120,6 +368,7 @@ parseSum tokens =
         (Op '-' : rest2) -> let (num2, rest3) = parseSum rest2 in (num1 - num2, rest3)
         _ -> (num1, rest1)
 
+-- Expression Number 4
 -- Handle multiplication and division
 parseProduct :: [Token] -> (Double, [Token])
 parseProduct tokens =
@@ -133,9 +382,10 @@ parseProduct tokens =
                               | otherwise -> (fromIntegral (floor num1 `mod` floor num2), rest3)
         _ -> (num1, rest1)
 
+-- Expression Number 5
 parseFactor :: [Token] -> (Double, [Token])
 parseFactor (ErrorToken msg : _) = (0, [ErrorToken msg])  -- Propagate the error message
-parseFactor [] = (0, [ErrorToken "[Error 103]: No more tokens and expected a number, an operation, or a function"])  -- Return an error message
+parseFactor [] = (0, [ErrorToken "[Error 103]: No more tokens as was exhausted"])  -- Return an error message
 parseFactor tokens = case tokens of
 -- Check for ex. _√(_)
     (Num n : Sqrt : rest) -> let (sqrtResult, rest') = parseFactor (Sqrt : rest)    in (n * sqrtResult, rest')
@@ -209,12 +459,54 @@ parseFactor tokens = case tokens of
     (E    : rest) -> (exp 1, rest)
 -- Check for ex. π
     (Pi   : rest) -> (pi, rest)
+-- When parser is exhaused
     _             -> (0, [ErrorToken "[Error 210]: Parse exhaused and syntax incorrect"])
 
+{-
 -----------------------------------------------------------------------------
-                            -- Storage Functions --
------------------------------------------------------------------------------
+                    -- Storage and History Management --
 
+1.  appendToFile :: FilePath -> String -> IO ()
+    
+    The appendToFile is designed to add a given string input to a specified file, 
+    used for maintaining a history of valid inputs in the calculator application. 
+    It first checks if the file exists, creating it if it doesn't, and then reads 
+    the current contents to determine if the new input is different from the last 
+    entry. If the new input is indeed different, it appends this input to the 
+    file, ensuring that the history is updated only with unique, consecutive 
+    entries.
+
+2.  readValidInputs :: FilePath -> IO [String]
+    
+    The readValidInputs function reads and retrieves a list of previously entered 
+    valid inputs from a specified file. It first checks if the file exists and 
+    creates an empty one if it doesn't. Then, it safely opens and reads the 
+    file's contents, ensuring proper resource handling with bracket, and returns 
+    the inputs as a list of strings.
+
+3.  removePolonskyMode :: String -> String
+
+	The removePolonskyMode function is a utility function designed to modify the 
+    calculator's input string by removing a specific marker, identified here as 
+    "Polonsky Mode". This function is used to clean up the input string before 
+    it is evaluated or stored in the application's history, ensuring that any 
+    special mode indicators do not interfere with the calculation logic or the 
+    recording of inputs.
+
+4.  navigateHistory :: [String] -> String -> Bool -> String
+
+    The navigateHistory function manages user navigation through the input 
+    history of the calculator application. It takes a list of historical inputs, 
+    the current input, and a Boolean indicating navigation direction (up or down 
+    through the history). This function then calculates the new index based on 
+    the current position and the navigation direction, and returns the 
+    corresponding historical input, enabling users to easily access and reuse 
+    their previous entries.
+
+-----------------------------------------------------------------------------
+-}
+
+-- Expression Number 1
 appendToFile :: FilePath -> String -> IO ()
 appendToFile filePath input = do
     fileExists <- doesFileExist filePath
@@ -225,8 +517,7 @@ appendToFile filePath input = do
     let shouldAppend = null history || (not (null history) && last history /= modifiedInput)
     when shouldAppend $ appendFile filePath (modifiedInput ++ "\n")
 
-
-
+-- Expression Number 2
 readValidInputs :: FilePath -> IO [String]
 readValidInputs filePath = do
     fileExists <- doesFileExist filePath
@@ -239,9 +530,11 @@ readValidInputs filePath = do
             deepseq contents (return contents))
     return (if null contents then [""] else lines contents)
 
+-- Expression Number 3
 removePolonskyMode :: String -> String
 removePolonskyMode input = replace "       !!!Polonsky Mode!!!" "" input
 
+-- Expression Number 4
 navigateHistory :: [String] -> String -> Bool -> String
 navigateHistory history currentInput isUp =
   let currentIndex = fromMaybe (-1) $ elemIndex currentInput history
@@ -279,7 +572,7 @@ parseSqrtWithBase tokens = case tokens of
                 let (secondNum, finalRest) = parseExpr secondNumRest
                 in case finalRest of
                     (Op ')' : rest') -> (secondNum ** (1 / firstNum), rest')  -- nth root of secondNum
-                    _ -> (0, [ErrorToken "[Error 213]: Missing closing parenthesis or comma after sqrt with base { √(x,y }"])
+                    _ -> (0, [ErrorToken "[Error 213]: Missing closing parenthesis/comma after sqrt with base { √(x,y }"])
             (Op ')' : rest') -> (sqrt firstNum, rest')  -- Regular square root
             _ -> (0, [ErrorToken "[Error 214]: Missing closing parenthesis after sqrt { √(x }"])
     _ -> (0, [ErrorToken "[Error 115]: Missing opening parenthesis after sqrt { √ x,y }"])
