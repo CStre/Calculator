@@ -18,76 +18,30 @@ module Main where
 -----------------------------------------------------------------------------
                             -- File Imports --
 -----------------------------------------------------------------------------
-
-1.  Used for the `makeLenses` and `^.`
-2.  Used for manipulating Text values in AppModel and various functions
-3.  Main library for GUI
-4.  Not directly used, a dependency of another import
-5.  Used in 'tokenize' for 'isDigit', 'isSpace'
-6.  Used in 'navigateHistory' for 'fromMaybe'
-7.  Used in 'evaluateExpression' for 'readMaybe'
-8.  Used in 'isError', 'replace', and 'navigateHistory' for list manipulations
-9.  Used in 'delay'
-10. Used in 'handleEvent' for 'liftIO'
-11. Used in 'appendToFile', 'readValidInputs'
-12. Used in 'appendToFile', 'readValidInputs'
-13. Used in 'readValidInputs'
-14. Not directly used, could be a dependency of another import
-15. Used in 'readValidInputs'
-16. Used for GUI combinators
-17. Used for GUI combinators
-18. Used for styling in GUI functions
-19. Used for lens operations in Monomer
-20. Not directly used, could be a dependency of another import
-21. Used in 'appendToFile', 'readValidInputs'
-22. Used in 'appendToFile', 'readValidInputs'
------------------------------------------------------------------------------
 -}
 
--- 1
-import Control.Lens
--- 2
-import Data.Text (Text, pack, unpack, center)
--- 3
-import Monomer
--- 4
-import TextShow
--- 5
-import Data.Char
--- 6
-import Data.Maybe
--- 7
-import Text.Read
--- 8
-import Data.List
--- 9
-import Control.Concurrent (threadDelay)
--- 10
-import Control.Monad.IO.Class (liftIO)
--- 11
-import System.IO
--- 12
-import Control.Monad
--- 13
-import Control.Exception
--- 14
-import System.IO.Unsafe (unsafePerformIO)
--- 15
-import Control.DeepSeq (deepseq)
--- 16
-import Monomer.Core.Combinators
--- 17
-import Data.List.Split (splitOn)
--- 18
-import Monomer.Core.Style (TextStyle)
--- 19
-import qualified Monomer.Lens as L
--- 20
-import Monomer.Event.Lens (HasRightShift(rightShift))
--- 21
-import System.Directory (doesFileExist)
--- 22
-import System.IO (writeFile)
+import Control.Lens                                     -- (1) For lens operations like `makeLenses` and `^.`, enabling concise syntax for manipulating data structures.
+import Data.Text (Text, pack, unpack, center)           -- (2) For handling Text data types, used throughout the app for text manipulation.
+import Monomer                                          -- (3) Main GUI library for building and managing the user interface.
+import TextShow                                         -- (4) Possibly for converting data to text, not directly used but might be a dependency.
+import Data.Char                                        -- (5) Provides character manipulation functions, used in 'tokenize' for character checks like `isDigit`, `isSpace`.
+import Data.Maybe                                       -- (6) For handling Maybe types, used in 'navigateHistory' for handling potential Nothing values with `fromMaybe`.
+import Text.Read                                        -- (7) For parsing strings into other types, used in 'evaluateExpression' with `readMaybe`.
+import Data.List                                        -- (8) Provides functions for list manipulation, used in various places like 'isError', 'replace', and 'navigateHistory'.
+import Control.Concurrent (threadDelay)                 -- (9) For introducing delays in program execution, used in 'delay'.
+import Control.Monad.IO.Class (liftIO)                  -- (10) For lifting IO actions into monads, used in 'handleEvent'.
+import System.IO                                        -- (11) For file input/output operations, used in 'appendToFile', 'readValidInputs'.
+import Control.Monad                                    -- (12) Provides utility functions for monadic operations, used with `unless`, `when` in file operations.
+import Control.Exception                                -- (13) For handling exceptions, used in 'readValidInputs' for safe file reading.
+import System.IO.Unsafe (unsafePerformIO)               -- (14) Allows IO operations in non-IO contexts, possibly a dependency of another import.
+import Control.DeepSeq (deepseq)                        -- (15) For fully evaluating data structures, used in 'readValidInputs' for strict file content reading.
+import Monomer.Core.Combinators                         -- (16) Provides combinators for building GUI elements in Monomer.
+import Data.List.Split (splitOn)                        -- (17) For splitting strings, used in 'replace' function.
+import Monomer.Core.Style (TextStyle)                   -- (18) For defining text styles in the GUI.
+import qualified Monomer.Lens as L                      -- (19) For more lens operations specific to Monomer, aiding in concise UI code.
+import Monomer.Event.Lens (HasRightShift(rightShift))   -- (20) For handling specific event-related lens operations in Monomer, possibly a dependency.
+import System.Directory (doesFileExist)                 -- (21) For checking the existence of files, used in 'appendToFile', 'readValidInputs'.
+import System.IO (writeFile)                            -- (22) For writing data to files, used in 'appendToFile', 'readValidInputs'.
 
 {-
 -----------------------------------------------------------------------------
@@ -112,149 +66,44 @@ makeLenses 'AppModel
 -----------------------------------------------------------------------------
                             -- AppEvent --
 -----------------------------------------------------------------------------
-
-1.  AddDigit Char:      
-        Represents an event where a digit is added to the current 
-        expression. The Char parameter signifies the digit to be 
-        added.
-
-2.  AddOperation Char:  
-        Corresponds to an event where an arithmetic operation 
-        (like +, -, ×, ÷) is added to the expression. The operation 
-        is passed as a Char.
-
-3.  AddFunction String: 
-        This event is triggered when a mathematical function (like 
-        sin, cos, log) is added. The specific function is 
-        represented as a String.   
-
-4.  Calculate:          
-        Signifies an event to perform the calculation based on 
-        the current input or expression.
-
-5.  Clear:          
-        Indicates an event to clear the current input or reset 
-        the calculator.
-
-6.  TimerEvent:         
-        Used for events that are based on a timer, for handling 
-        timeouts or delays in the application.
-
-7.  NoOp:               
-        Represents a "no operation" event, essentially an event 
-        where nothing happens. It can be useful for default cases 
-        or as a placeholder.
-
-8.  ClearMem:                   
-        This event corresponds to clearing stored memory or 
-        history in the calculator.
-
-9.  HistoryUp and HistoryDown:  
-        These events are used for navigating through the 
-        history of calculations or inputs.
-
-10. ToggleFun:                  
-        This is an event to toggle a special mode in the 
-        calculator, a more advanced alternate set of 
-        functionalities.
-
-11. SetInput String:            
-        Represents an event to set the calculator's 
-        input to a specific string value.
-
------------------------------------------------------------------------------
 -}
 
-data AppEvent = AddDigit Char       --Number 1
-              | AddOperation Char   --Number 2
-              | AddFunction String  --Number 3
-              | Calculate           --Number 4
-              | Clear               --Number 5
-              | TimerEvent          --Number 6
-              | NoOp                --Number 7
-              | ClearMem            --Number 8
-              | HistoryUp           --Number 9
-              | HistoryDown         --Number 9
-              | ToggleFun           --Number 10
-              | SetInput String     --Number 11
+data AppEvent = AddDigit Char       -- Digit is added to expression
+              | AddOperation Char   -- Arithmetic operation added to expression (like +, -, ×, ÷)
+              | AddFunction String  -- Mathematical operation added to expression (like sin, cos, log)
+              | Calculate           -- Performs the calculation based on the current input or expression.
+              | Clear               -- Clears the current input
+              | TimerEvent          -- Used for events to be auto-cleared like Errors
+              | NoOp                -- When nothing happenes; used in the histroy
+              | ClearMem            -- Used for clearing the system memory
+              | HistoryUp           -- This is used to look up to memory
+              | HistoryDown         -- This is used to look down from memory
+              | ToggleFun           -- Toggle for the special Polonsky Mode
+              | SetInput String     -- Used to set the input to a specific thing
   deriving (Eq, Show)
 
 {-
 -----------------------------------------------------------------------------
                                 -- Token --
 -----------------------------------------------------------------------------
-
-1.  Num Double: 
-        Represents a numerical value. The Double type is used to handle floating-point 
-        numbers, allowing for both integers and decimals in the calculations.
-
-2.	Op Char: 
-        Represents an operator. The Char value could be any character representing 
-        an arithmetic operation, such as '+', '-', '×', '÷', etc.
-
-3.	Sqrt: 
-        Symbolizes the square root operation. It indicates that a square root 
-        function will be applied to a subsequent numerical value or expression.
-
-4.	Cos, Tan, Sin: 
-        Represent the trigonometric functions cosine, tangent, and sine, 
-        respectively. These are used to perform trigonometric calculations on
-        numbers or expressions that follow.
-
-5.	Log, Ln: 
-        Stand for logarithmic functions. Log typically represents a logarithm with 
-        a base of 10, whereas Ln is the natural logarithm (base e).
-
-6.	E: 
-        Represents the mathematical constant e (approximately 2.71828), which is 
-        the base of the natural logarithm.
-
-7.	Abs: 
-        Represents the absolute value function, used to return the absolute 
-        (non-negative) value of a number or expression.
-
-8.	Comma: 
-        Used as a delimiter, primarily in functions that require more than one 
-        argument, like the logarithm with a specific base (Log).
-
-9.	Pi: 
-        Represents the mathematical constant π (Pi).
-
-10.	Exp: 
-        Symbolizes the exponentiation operation. It is used to raise a number 
-        to the power of another number.
-
-11.	Fact: 
-        Represents the factorial operation, denoted as '!'. It is used to 
-        calculate the factorial of a number.
-
-12.	Mod: 
-        Represents the modulo operation, denoted as '%'. It calculates the 
-        remainder of the division of one number by another.
-
-13.	ErrorToken String: 
-        Used to handle errors in parsing or interpreting the expression. The String 
-        contains an error message describing the nature of the error.
-
------------------------------------------------------------------------------
 -}
 
-data Token = Num Double      --Number 1
-          | Op Char          --Number 2
-          | Sqrt             --Number 3
-          | Cos              --Number 4
-          | Tan              --Number 4
-          | Sin              --Number 4
-          | Log              --Number 5
-          | Ln               --Number 5
-          | E                --Number 6
-          | Abs              --Number 7
-          | Comma            --Number 8
-          | Pi               --Number 9
-          | Exp              --Number 10
-          | Fact             --Number 11
-          | Mod              --Number 12
-          | ErrorToken String--Number 13
+data Token = Num Double     -- Used for floating-point numbers x.y
+        | Op Char           -- Represents an operator such as '+', '-', '×', '÷', etc.
+        | Sqrt              -- Square Root operator √(x)
+        | Cos               -- Cosine operator cos(x)
+        | Tan               -- Tangent operator tan(x)
+        | Sin               -- Sin operator sin(x)
+        | Log               -- Logarithm operator log(x) or log(x, y)
+        | Ln                -- Natural Log operator ln(x)
+        | E                 -- Euler's Number e
+        | Abs               -- Absolute Value operator abs(x)
+        | Comma             -- Comma operator '(', ')'
+        | Pi                -- Pi operator π
+        | Exp               -- Exponent operator for 2 x^(2)
+        | Fact              -- Factorial operator x!
+        | Mod               -- Modulo operator x%y
+        | ErrorToken String -- Error handler for descriptive system
     deriving Show
 
 {-
@@ -275,28 +124,32 @@ application.
 tokenize :: String -> [Token]
 tokenize [] = []
 tokenize str@(c:cs)
-    | c == '.' =
+    | c == '.' = -- Handle cases where the string starts with a decimal point
         if null cs
-        then [Num 0.0]  -- Handle the case where the input is just a period
-        else if isFunctionStart (head cs)
-             then [ErrorToken "[Error 303]: Invalid use of '.' before a function or symbol"]
-             else let (num, rest) = span (\x -> isDigit x || x == '.') str
-                      dotCount = length $ filter (== '.') num
-                      correctedNum = if head num == '.' then '0':num else num
-                  in if dotCount <= 1 then Num (read correctedNum) : tokenize rest
-                     else [ErrorToken "[Error 302]: Invalid number format. Must follow x.y"]
-    | isDigit c = 
-        let (num, rest) = span isDigit str
-        in Num (read num) : tokenize rest
-    | isSpace c = tokenize cs
-    | c == '+' = Op '+' : tokenize cs
+        then [Num 0.0]  -- If the string is just a period, return 0.0
+        else if isFunctionStart (head cs) -- Check if the character following the period is the start of a function
+             then ErrorToken "[Error 303]: Invalid use of '.' before a function or symbol" : tokenize cs -- Return an error if a period is improperly used before a function
+             else let correctedStr = if isDigit (head cs) then '0':str else str  -- Prepend '0' to the string if the next character is a digit
+                      (num, rest) = span (\x -> isDigit x || x == '.') correctedStr -- Extract number and remaining string
+                      dotCount = length $ filter (== '.') num -- Count number of decimal points in the number
+                  in if dotCount == 1
+                     then Num (read num) : tokenize rest -- If only one decimal point, return the number and tokenize the rest
+                     else [ErrorToken "[Error 302.1]: Invalid number format. Multiple decimal points detected."] -- If multiple decimal points, return an error
+    | isDigit c || (c == '-' && isDigit (head cs)) = -- Handle cases where the string starts with a digit or a negative sign followed by a digit
+        let (num, rest) = span (\x -> isDigit x || x == '.') str
+            dotCount = length $ filter (== '.') num
+        in if dotCount <= 1
+           then Num (read num) : tokenize rest
+           else [ErrorToken "[Error 302.2]: Invalid number format. Multiple decimal points detected."]
+    | isSpace c = tokenize cs -- Skip spaces
+    | c == '+' = Op '+' : tokenize cs -- Tokenize operators
     | c == '-' = Op '-' : tokenize cs
     | c == '×' = Op '×' : tokenize cs
     | c == '÷' = Op '÷' : tokenize cs
     | c == '(' = Op '(' : tokenize cs
     | c == ')' = Op ')' : tokenize cs
     | c == '%' = Mod    : tokenize cs
-    | take 1 str == "π"     = Pi    : tokenize (drop 1 str)
+    | take 1 str == "π"     = Pi    : tokenize (drop 1 str) -- Tokenize constants and functions
     | take 1 str == ","     = Comma : tokenize (drop 1 str)
     | take 1 str == "√"     = Sqrt  : tokenize (drop 1 str)
     | take 3 str == "cos"   = Cos   : tokenize (drop 3 str)
@@ -308,9 +161,9 @@ tokenize str@(c:cs)
     | take 1 str == "e"     = E     : tokenize (drop 1 str)
     | take 1 str == "^"     = Exp   : tokenize (drop 1 str)
     | take 1 str == "!"     = Fact  : tokenize (drop 1 str)
-    | otherwise = [ErrorToken "[Error 201]: Unrecognized input symbol and not able to tokenize"] -- ErrorToken is a new constructor in Token data type
+    | otherwise = [ErrorToken "[Error 201]: Unrecognized input symbol and not able to tokenize"] -- Handle errors or unrecognized symbols
     where
-        isFunctionStart :: Char -> Bool
+        isFunctionStart :: Char -> Bool -- Define function start characters for . symbol
         isFunctionStart x = any (x ==) ['+', '-', '×', '÷', '(', ')', '%', 'π', ',', '√', 'c', 't', 's', 'l', 'a', 'e', '^', '!']
 
 {-
@@ -368,15 +221,17 @@ tokenize str@(c:cs)
 -}
 
 ------------ Expression Number 1 ------------
+-- Evaluates a list of tokens representing a mathematical expression.
 eval :: [Token] -> String
 eval tokens = case parseExpr tokens of
-  (result, []) -> formatOutput result
-  (_, ErrorToken msg : _) -> msg 
-  _ -> "[Error 100]: Incorrect Syntax with operation usage"
+  (result, []) -> formatOutput result -- Formats the result if no tokens are left
+  (_, ErrorToken msg : _) -> msg -- Returns an error message if an ErrorToken is encountered
+  _ -> "[Error 100]: Incorrect Syntax with operation usage" -- Default error message for incorrect syntax
 
 ------------ Expression Number 2 ------------
+-- Parses a list of tokens and evaluates the expression starting with the highest precedence operation.
 parseExpr :: [Token] -> (Double, [Token])
-parseExpr = parseSum  -- As the highest level of precedence
+parseExpr = parseSum  -- Entry point for expression parsing
 
 ------------ Expression Number 3 ------------
 -- Handle addition and subtraction
@@ -397,36 +252,26 @@ parseProduct tokens =
         (Op '×' : rest2) -> let (num2, rest3) = parseProduct rest2 in (num1 * num2, rest3)
         (Op '÷' : rest2) -> let (num2, rest3) = parseProduct rest2 in (num1 / num2, rest3)
         (Mod : rest2) ->
-            case parseFactor rest2 of
+            case parseFactor rest2 of -- Handle modulo operation
                 (num2, rest3) | num2 == 0 -> (0, [ErrorToken "[Error 102]: Division by zero in mod not possible { x%0 }"])
                               | otherwise -> (fromIntegral (floor num1 `mod` floor num2), rest3)
-        _ -> (num1, rest1)
+        _ -> (num1, rest1) -- No multiplication, division, or modulo, return current results
 
 ------------ Expression Number 5 ------------
 parseFactor :: [Token] -> (Double, [Token])
-parseFactor (ErrorToken msg : _) = (0, [ErrorToken msg])  -- Propagate the error message
-parseFactor [] = (0, [ErrorToken "[Error 103]: No more tokens as was exhausted"])  -- Return an error message
+parseFactor (ErrorToken msg : _) = (0, [ErrorToken msg])                            -- Propagate the error message
+parseFactor [] = (0, [ErrorToken "[Error 103]: No more tokens as was exhausted"])   -- Return an error message
 parseFactor tokens = case tokens of
--- Check for ex. _√(_)
-    (Num n : Sqrt : rest) -> let (sqrtResult, rest') = parseFactor (Sqrt : rest)    in (n * sqrtResult, rest')
--- Check for ex. _cos(_)
-    (Num n : Cos  : rest) -> let (cosResult, rest')  = parseFactor (Cos  : rest)    in (n * cosResult, rest')
--- Check for ex. _tan(_)
-    (Num n : Tan  : rest) -> let (tanResult, rest')  = parseFactor (Tan  : rest)    in (n * tanResult, rest')
--- Check for ex. _sin(_)
-    (Num n : Sin  : rest) -> let (sinResult, rest')  = parseFactor (Sin  : rest)    in (n * sinResult, rest')
--- Check for ex. _log(_)
-    (Num n : Log  : rest) -> let (logResult, rest')  = parseFactor (Log  : rest)    in (n * logResult, rest')
--- Check for ex. _ln(_)
-    (Num n : Ln   : rest) -> let (lnResult, rest')   = parseFactor (Ln   : rest)    in (n * lnResult, rest')
--- Check for ex. _e(_)
-    (Num n : E    : rest) -> let (eResult, rest')    = parseFactor (E    : rest)    in (n * eResult, rest')
--- Check for ex. _π(_)
-    (Num n : Pi   : rest) -> let (piResult, rest')   = parseFactor (Pi   : rest)    in (n * piResult, rest')
--- Check for ex. _abs(_)
-    (Num n : Abs  : rest) -> let (absResult, rest')  = parseFactor (Abs  : rest)    in (n * absResult, rest')
--- Check for ex. _^(_)
-    (Num n : Exp : rest) ->
+    (Num n : Sqrt : rest) -> let (sqrtResult, rest') = parseFactor (Sqrt : rest)    in (n * sqrtResult, rest')  -- Check for ex. _√(_)
+    (Num n : Cos  : rest) -> let (cosResult, rest')  = parseFactor (Cos  : rest)    in (n * cosResult, rest')   -- Check for ex. _cos(_)
+    (Num n : Tan  : rest) -> let (tanResult, rest')  = parseFactor (Tan  : rest)    in (n * tanResult, rest')   -- Check for ex. _tan(_)
+    (Num n : Sin  : rest) -> let (sinResult, rest')  = parseFactor (Sin  : rest)    in (n * sinResult, rest')   -- Check for ex. _sin(_)
+    (Num n : Log  : rest) -> let (logResult, rest')  = parseFactor (Log  : rest)    in (n * logResult, rest')   -- Check for ex. _log(_)
+    (Num n : Ln   : rest) -> let (lnResult, rest')   = parseFactor (Ln   : rest)    in (n * lnResult, rest')    -- Check for ex. _ln(_)
+    (Num n : E    : rest) -> let (eResult, rest')    = parseFactor (E    : rest)    in (n * eResult, rest')     -- Check for ex. _e(_)
+    (Num n : Pi   : rest) -> let (piResult, rest')   = parseFactor (Pi   : rest)    in (n * piResult, rest')    -- Check for ex. _π(_)
+    (Num n : Abs  : rest) -> let (absResult, rest')  = parseFactor (Abs  : rest)    in (n * absResult, rest')   -- Check for ex. _abs(_)
+    (Num n : Exp : rest) -> -- Check for ex. _^(2)
         case rest of
             (Op '(' : rest') ->
                 let (expResult, restAfterExp) = parseExpr rest'
@@ -434,53 +279,37 @@ parseFactor tokens = case tokens of
                     (Op ')' : restFinal) -> (n ** expResult, restFinal)
                     _ -> (0, [ErrorToken "[Error 104]: Missing closing parenthesis for exponent operator { x^(x }"])
             _ -> (0, [ErrorToken "[Error 205]: Expected opening parenthesis after exponent operator { x^ }"])
--- Check for ex. -_!
-    (Op '-' : Num n : Fact : rest) -> (0, [ErrorToken "[Error 106]: Factorial not defined for negative numbers"])
--- Check for ex. _!
-    (Num n : Fact : rest) -> case factorial (round n) of
+    (Op '-' : Num n : Fact : rest) -> (0, [ErrorToken "[Error 106]: Factorial not defined for negative numbers"])   -- Check for ex. -_!
+    (Num n : Fact : rest) -> case factorial (round n) of                                                            -- Check for ex. _!
             Just factResult -> (fromIntegral factResult, rest)
-            Nothing -> (0, [ErrorToken "[Error 207]: Factorial computation failed"])
--- Check for ex. _(_) *making sure there are a set of paranthesis and a number before that is multiplied*
-    (Num n : Op '(' : rest) ->
+            Nothing -> (0, [ErrorToken "[Error 207]: Factorial computation failed or overloaded. 28! MAX"])
+    (Num n : Op '(' : rest) -> -- Check for ex. _(_) *making sure there are a set of paranthesis and a number before that is multiplied*
         let (exprResult, restAfterExpr) = parseExpr rest in
         case restAfterExpr of
             (Op ')' : restAfterParen) ->
                 let (nextFactorResult, finalRest) = parseImplicitMultiplication (n * exprResult) restAfterParen
                 in (nextFactorResult, finalRest)
             _ -> (0, [ErrorToken "[Error 208]: Missing closing parenthesis on implicit case"])
--- Check for ex. _ _ 
 -- Making sure that having either no mathematical symbol before a function
-    (Num n : rest) -> parseImplicitMultiplication n rest
--- Check for --_ to make number negative
-    (Op '-' : rest) -> let (n, rest') = parseFactor rest in (-n, rest')
--- Check for ex. (_) full set of parenthesis
-    (Op '(' : rest) ->
+    (Num n : rest) -> parseImplicitMultiplication n rest                -- Check for ex. _ _ 
+    (Op '-' : rest) -> let (n, rest') = parseFactor rest in (-n, rest') -- Check for --_ to make number negative
+    (Op '(' : rest) ->                                                  -- Check for ex. (_) full set of parenthesis
         let (exprResult, restAfterExpr) = parseExpr rest in
         case restAfterExpr of
             (Op ')' : Num n : restAfterNum) -> let (factorResult, restAfterFactor) = parseFactor (Num n : restAfterNum)
                                                in (exprResult * factorResult, restAfterFactor)
             (Op ')' : restAfterParen) -> parseImplicitMultiplication exprResult restAfterParen
             _ -> (0, [ErrorToken "[Error 209]: Missing closing parenthesis"])
--- Check for ex. √(_,_)
-    (Sqrt : rest) -> parseSqrtWithBase rest
--- Check for ex. abs(_)
-    (Abs  : rest) -> let (n, rest') = parseFactor rest in (abs n, rest')
--- Check for ex. cos(_)
-    (Cos  : rest) -> let (n, rest') = parseFactor rest in (cos n, rest')
--- Check for ex. tan(_)
-    (Tan  : rest) -> let (n, rest') = parseFactor rest in (Prelude.tan n, rest')
--- Check for ex. sin(_)
-    (Sin  : rest) -> let (n, rest') = parseFactor rest in (sin n, rest')
--- Check for ex. log(_,_)
-    (Log  : rest) -> parseLogOrLnWithBase logBase 10 rest
--- Check for ex. ln(_,_)
-    (Ln   : rest) -> parseLogOrLnWithBase logBase (exp 1) rest
--- Check for ex. e
-    (E    : rest) -> (exp 1, rest)
--- Check for ex. π
-    (Pi   : rest) -> (pi, rest)
--- When parser is exhaused
-    _             -> (0, [ErrorToken "[Error 210]: Parse exhaused and syntax incorrect"])
+    (Sqrt : rest) -> parseSqrtWithBase rest                                         -- Check for ex. √(_,_)
+    (Abs  : rest) -> let (n, rest') = parseFactor rest in (abs n, rest')            -- Check for ex. abs(_)
+    (Cos  : rest) -> let (n, rest') = parseFactor rest in (cos n, rest')            -- Check for ex. cos(_)
+    (Tan  : rest) -> let (n, rest') = parseFactor rest in (Prelude.tan n, rest')    -- Check for ex. tan(_)
+    (Sin  : rest) -> let (n, rest') = parseFactor rest in (sin n, rest')            -- Check for ex. sin(_)
+    (Log  : rest) -> parseLogOrLnWithBase logBase 10 rest                           -- Check for ex. log(_,_)
+    (Ln   : rest) -> parseLogOrLnWithBase logBase (exp 1) rest                      -- Check for ex. ln(_,_)
+    (E    : rest) -> (exp 1, rest)                                                  -- Check for ex. e
+    (Pi   : rest) -> (pi, rest)                                                     -- Check for ex. π
+    _             -> (0, [ErrorToken "[Error 210]: Parse exhaused and syntax incorrect"]) -- When parser is exhaused
 
 {-
 -----------------------------------------------------------------------------
@@ -722,6 +551,7 @@ parseImplicitMultiplication prevResult tokens = case tokens of
 factorial :: Integer -> Maybe Integer
 factorial n
   | n < 0     = Nothing
+  | n > 29    = Nothing
   | n == 0    = Just 1
   | otherwise = fmap (n *) (factorial (n - 1))
 
@@ -744,7 +574,7 @@ isError = isPrefixOf "[Error"
 
 ------------ Expression Number 8 ------------
 delay :: Int -> IO ()
-delay ms = threadDelay (ms * 2000)
+delay ms = threadDelay (ms * 1400)
 
 ------------ Expression Number 9 ------------
 replace :: String -> String -> String -> String
@@ -934,14 +764,14 @@ handleEvent wenv node model evt = case evt of
 ------------ Expression Number 4 ------------
 main :: IO ()
 main = startApp model handleEvent buildUI config where
-config = [
-    appWindowTitle "Polonsky's Big Brain Calculator",
-    appWindowIcon "./assets/images/icon.png",
+config = [  
+    appWindowTitle       "Polonsky's Big Brain Calculator",
+    appWindowIcon        "./assets/images/calculator.png",
     appTheme darkTheme,
     appFontDef "Regular" "./assets/fonts/Roboto-Regular.ttf",
-    appFontDef "Medium" "./assets/fonts/Roboto-Medium.ttf",
-    appFontDef "Bold" "./assets/fonts/Roboto-Bold.ttf",
-    appFontDef "Italic" "./assets/fonts/Roboto-Italic.ttf",
+    appFontDef "Medium"  "./assets/fonts/Roboto-Medium.ttf",
+    appFontDef "Bold"    "./assets/fonts/Roboto-Bold.ttf",
+    appFontDef "Italic"  "./assets/fonts/Roboto-Italic.ttf",
     appWindowResizable True,
     appWindowBorder True
     ]
