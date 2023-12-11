@@ -16,7 +16,9 @@ module Main where
 
 {-
 -----------------------------------------------------------------------------
+                            
                             -- File Imports --
+
 -----------------------------------------------------------------------------
 -}
 
@@ -45,7 +47,9 @@ import System.IO (writeFile)                            -- (22) For writing data
 
 {-
 -----------------------------------------------------------------------------
+                            
                             -- AppModel --
+
 -----------------------------------------------------------------------------
 
 1.  AppModel represents the state of the application. In the context of this 
@@ -64,7 +68,9 @@ makeLenses 'AppModel
 
 {-
 -----------------------------------------------------------------------------
+                            
                             -- AppEvent --
+
 -----------------------------------------------------------------------------
 -}
 
@@ -84,7 +90,9 @@ data AppEvent = AddDigit Char       -- Digit is added to expression
 
 {-
 -----------------------------------------------------------------------------
+                                
                                 -- Token --
+
 -----------------------------------------------------------------------------
 -}
 
@@ -108,7 +116,9 @@ data Token = Num Double     -- Used for floating-point numbers x.y
 
 {-
 -----------------------------------------------------------------------------
+                            
                             -- Tokenize --
+
 -----------------------------------------------------------------------------
 
 The tokenize function takes a String as input and converts it into a list of 
@@ -161,53 +171,13 @@ tokenize str@(c:cs)
 
 {-
 -----------------------------------------------------------------------------
+                   
+                   
+                   
+                   
                     -- Expression Evaluation (PARSER) --
------------------------------------------------------------------------------
 
-1.  eval :: [Token] -> String
 
-    The eval function is responsible for evaluating a list of tokens that 
-    represent a mathematical expression. It takes a list of Token as input 
-    and returns a String as output. The function first parses the expression 
-    using parseExpr and then formats the output using formatOutput. It also 
-    handles error tokens by returning appropriate error messages, ensuring 
-    that any syntactical or operational errors in the expression are reported 
-    back to the user.
-
-2. parseExpr :: [Token] -> (Double, [Token])
-
-    The parseExpr function is a key component responsible for parsing and 
-    evaluating mathematical expressions represented as a list of tokens. It 
-    serves as the entry point to the expression evaluation logic, starting 
-    with the highest precedence operation (addition and subtraction in this 
-    case) and delegating to more specific parsing functions like parseSum, 
-    parseProduct, and parseFactor. This function utilizes a recursive 
-    approach to handle complex, nested expressions, ensuring correct 
-    evaluation order and handling of different mathematical operations and 
-    functions.
-
-3. parseSum :: [Token] -> (Double, [Token])
-
-    The parseSum function is designed to parse and evaluate addition and subtraction 
-    operations within a mathematical expression. It operates on a list of tokens, 
-    identifying and processing tokens that represent addition (+) and subtraction (-) 
-    operations according to their precedence in the expression. The function 
-    recursively computes the sum or difference of the numerical values
-
-4. parseProduct :: [Token] -> (Double, [Token])
-    
-    The parseProduct function handles the parsing and evaluation of multiplication 
-    and division operations within a mathematical expression. It processes a list 
-    of tokens (representing the expression) and identifies multiplication (×), 
-    division (÷), and modulo (%) operations.
-
-5. parseFactor :: [Token] -> (Double, [Token])
-    
-    The parseFactor function is responsible for parsing and evaluating the 
-    lowest level of expressions in a mathematical calculation, “Factors". It 
-    handles a variety of inputs, including numbers, parentheses, mathematical 
-    constants (like π and e), unary operations (like factorial and square 
-    root), and implicit multiplication.
 
 
 -----------------------------------------------------------------------------
@@ -306,227 +276,106 @@ parseFactor tokens = case tokens of
 
 {-
 -----------------------------------------------------------------------------
+                    
+                    
+                    
+                    
                     -- Storage and History Management --
------------------------------------------------------------------------------
 
-1.  appendToFile :: FilePath -> String -> IO ()
-    
-    The appendToFile is designed to add a given string input to a specified file, 
-    used for maintaining a history of valid inputs in the calculator application. 
-    It first checks if the file exists, creating it if it doesn't, and then reads 
-    the current contents to determine if the new input is different from the last 
-    entry. If the new input is indeed different, it appends this input to the 
-    file, ensuring that the history is updated only with unique, consecutive 
-    entries.
 
-2.  readValidInputs :: FilePath -> IO [String]
-    
-    The readValidInputs function reads and retrieves a list of previously entered 
-    valid inputs from a specified file. It first checks if the file exists and 
-    creates an empty one if it doesn't. Then, it safely opens and reads the 
-    file's contents, ensuring proper resource handling with bracket, and returns 
-    the inputs as a list of strings.
 
-3.  removePolonskyMode :: String -> String
-
-	The removePolonskyMode function is a utility function designed to modify the 
-    calculator's input string by removing a specific marker, identified here as 
-    "Polonsky Mode". This function is used to clean up the input string before 
-    it is evaluated or stored in the application's history, ensuring that any 
-    special mode indicators do not interfere with the calculation logic or the 
-    recording of inputs.
-
-4.  navigateHistory :: [String] -> String -> Bool -> String
-
-    The navigateHistory function manages user navigation through the input 
-    history of the calculator application. It takes a list of historical inputs, 
-    the current input, and a Boolean indicating navigation direction (up or down 
-    through the history). This function then calculates the new index based on 
-    the current position and the navigation direction, and returns the 
-    corresponding historical input, enabling users to easily access and reuse 
-    their previous entries.
 
 -----------------------------------------------------------------------------
 -}
 
 ------------ Expression Number 1 ------------
-appendToFile :: FilePath -> String -> IO ()
+appendToFile :: FilePath -> String -> IO () -- Appends a given string to a file at the specified file path.
 appendToFile filePath input = do
-    fileExists <- doesFileExist filePath
+    fileExists <- doesFileExist filePath ---- Check if the file exists. If not, create an empty file.
     unless fileExists $ writeFile filePath ""
-    contents <- readFile filePath
-    let modifiedInput = removePolonskyMode input
-    let history = lines contents
-    let shouldAppend = null history || (not (null history) && last history /= modifiedInput)
-    when shouldAppend $ appendFile filePath (modifiedInput ++ "\n")
+    contents <- readFile filePath  -- Read the current contents of the file.
+    let modifiedInput = removePolonskyMode input  -- Modify the input to remove any special modes (e.g., Polonsky Mode).
+    let history = lines contents  -- Convert the file contents into a list of lines (history).
+    let shouldAppend = null history || (not (null history) && last history /= modifiedInput) -- Determine if the modified input should be appended to the file.
+    when shouldAppend $ appendFile filePath (modifiedInput ++ "\n") -- Append the modified input to the file if the above condition is true.
 
 ------------ Expression Number 2 ------------
-readValidInputs :: FilePath -> IO [String]
-readValidInputs filePath = do
+readValidInputs :: FilePath -> IO [String] -- Reads a list of previously entered valid inputs from a specified file.
+readValidInputs filePath = do -- Check if the file exists. If not, create an empty file.
     fileExists <- doesFileExist filePath
     unless fileExists $ writeFile filePath ""  -- Create an empty file if it doesn't exist
-    contents <- bracket
+    contents <- bracket -- Safely open and read the file's contents, ensuring proper resource handling.
         (openFile filePath ReadMode)
-        (\h -> hClose h)
+        (\h -> hClose h) -- Ensure the file is closed after reading.
         (\h -> do
             contents <- hGetContents h
-            deepseq contents (return contents))
-    return (if null contents then [""] else lines contents)
-
+            deepseq contents (return contents)) -- Force the full evaluation of the file contents.
+    return (if null contents then [""] else lines contents) -- Return the file contents as a list of lines. 
+                                                            -- If the file is empty, return a list with an empty string.
 ------------ Expression Number 3 ------------
-removePolonskyMode :: String -> String
+removePolonskyMode :: String -> String -- Removes a specific marker (Polonsky Mode) from the input string.
 removePolonskyMode input = replace "       !!!Polonsky Mode!!!" "" input
-
+-- This function is used to clean up the input string before it is evaluated or stored.
 ------------ Expression Number 4 ------------
-navigateHistory :: [String] -> String -> Bool -> String
+navigateHistory :: [String] -> String -> Bool -> String -- Navigates through the input history of the calculator application.
 navigateHistory history currentInput isUp =
-  let currentIndex = fromMaybe (-1) $ elemIndex currentInput history
-      newIndex = if isUp then currentIndex - 1 else currentIndex + 1
-  in if newIndex >= 0 && newIndex < length history
-     then history !! newIndex
-     else currentInput
+    let currentIndex = fromMaybe (-1) $ elemIndex currentInput history -- Determine the current index of the input in the history.
+        newIndex = if isUp then currentIndex - 1 else currentIndex + 1 -- Calculate the new index based on the navigation direction.
+    in if newIndex >= 0 && newIndex < length history -- Return the historical input corresponding to the new index.
+        then history !! newIndex -- If the new index is out of bounds, return the current input.
+        else currentInput
 
 {-
 -----------------------------------------------------------------------------
+                            
+                            
+                            
+                            
                             -- Helper Functions --
------------------------------------------------------------------------------
 
-1.  parseLogOrLnWithBase :: (Double -> Double -> Double) -> Double -> [Token] -> (Double, [Token])
 
-    The parseLogOrLnWithBase function parses and evaluates logarithmic 
-    expressions with a specified base, such as log(x, y) or ln(x). It takes 
-    a function f representing the logarithm computation, a default base 
-    (like 10 for log or e for ln), and a list of tokens that represent a 
-    mathematical expression. The function intelligently handles various cases, 
-    including the presence or absence of a base in the expression, and errors 
-    such as missing parentheses or commas.
 
-2.  parseSqrtWithBase :: [Token] -> (Double, [Token])
 
-    The parseSqrtWithBase function is designed to parse square root 
-    expressions with an optional base from a list of tokens. It handles 
-    two formats: a regular square root (√(x)) and a nth root with a specified 
-    base (√(n,x)). This function uses pattern matching to interpret the tokens, 
-    extract the numerical values for the base and the number under the root 
-    (if provided), and computes the appropriate root value, returning the result 
-    along with any remaining unparsed tokens.
-
-3.  parseImplicitMultiplication :: Double -> [Token] -> (Double, [Token])
-
-    The parseImplicitMultiplication function is designed to handle implicit 
-    multiplication in mathematical expressions. It takes a previously calculated 
-    result and a list of tokens (representing the remaining part of the expression) 
-    as inputs. If the next token is a number, it multiplies this number with the 
-    previously calculated result, effectively handling cases where an explicit 
-    multiplication operator is omitted 
-    (e.g., 2(3) being interpreted as 2 * 3)
-
-4.  factorial :: Integer -> Maybe Integer
-
-    The factorial function calculates the factorial of a given integer. 
-    It recursively multiplies the number by the factorial of the number minus 
-    one, continuing this process until it reaches zero. The function gracefully 
-    handles negative input by returning Nothing
-
-5.  upperLimit :: Double
-
-    The upperLimit function sets a threshold for the maximum value that the 
-    calculator can handle. It is defined as a constant (upperLimit :: Double) 
-    with a value of 1e30.
-
-6.  formatOutput :: Double -> String
-
-    The formatOutput function is designed to format the output of a calculator 
-    operation. It checks whether the result is a whole number and, if so, it 
-    displays it as an integer (without a decimal point). In cases where 
-    the result is not a whole number, it displays it as a floating-point number.
-
-7.  isError :: String -> Bool
-
-    The isError function is a utility function used to check if a given String 
-    represents an error message. It takes a String as input and returns a 
-    Bool. This function works by checking if the input string starts with 
-    the specific error message prefix "[Error", using the isPrefixOf 
-    function from the Data.List module, which is a standard approach for 
-    string pattern matching in Haskell.
-
-8.  delay :: Int -> IO ()
-
-    The delay function is another utility function for introducing a delay or 
-    pause in the program's execution. Specifically, it uses threadDelay, which 
-    suspends the current thread for a specified number of milliseconds. In this 
-    context, delay ms pauses the execution for ms milliseconds, allowing for 
-    timed behaviors in the application, such as temporary display of messages or 
-    controlled pacing of certain actions.
-
-9.  replace :: String -> String -> String -> String
-
-    The replace function is for replacing a specific substring within a string 
-    with another substring. It takes three arguments: the substring to be replaced 
-    (old), the substring to replace with (new), and the original string. The 
-    function works by splitting the original string at occurrences of the old 
-    substring and then intercalating (joining) these split parts with the new 
-    substring.
-
-10. hSpacer :: Double -> WidgetNode s e
-
-    The hSpacer function is designed to create a horizontal spacer widget within 
-    the graphical user interface of the calculator application. It takes a Double 
-    value as input, representing the width of the spacer in pixels. This function 
-    is primarily used to add horizontal spacing between UI elements, such as buttons, 
-    in the application's layout.
-
-11. vSpacer :: Double -> WidgetNode s e
-
-	Same as the above function but creates spacing along a vertical axis.
-
-12. funModeMarker :: String
-
-    The funModeMarker is a string constant defined as " !!!Polonsky Mode!!!". 
-    This marker is used to identify the special mode within the calculator 
-    application, referred to as "Polonsky Mode". When this mode is active, 
-    the calculator's behavior or display changes, and the presence of this 
-    marker in the user input or application state is used to trigger or indicate 
-    this special mode.
-
-13. inputLabelStyle :: [TextStyle]
-
-    The inputLabelStyle is not a function but a list of TextStyle settings defined 
-    for styling text elements in the GUI. This function was intended to be 
-    implemented to style the calculator input but after many hours of trial and 
-    error, I decided to leave it an example of the structure I was working towards. 
 
 -----------------------------------------------------------------------------
 -}
 
 ------------ Expression Number 1 ------------
--- Helper function to parse Log(_) or Log(_,_) same thing with Ln!
+-- Parses logarithmic expressions with a specified base, such as log(x, y) or ln(x).
+-- 'f' is a function representing the logarithm computation.
+-- 'defaultBase' is used when only one argument is provided (e.g., ln(x) is log(e, x)).
 parseLogOrLnWithBase :: (Double -> Double -> Double) -> Double -> [Token] -> (Double, [Token])
 parseLogOrLnWithBase f defaultBase tokens = case tokens of
     (Op '(' : rest) ->
+        -- Parse the first number inside the parentheses.
         let (firstNum, restAfterFirstNum) = parseFactor rest in
         case restAfterFirstNum of
+            -- Case for two arguments: log(x, y).
             (Comma : secondNumRest) ->
                 let (secondNum, finalRest) = parseFactor secondNumRest
                 in case finalRest of
-                    (Op ')' : rest') -> (f firstNum secondNum, rest')
-                    _ -> (0, [ErrorToken "[Error 211]: Missing closing parenethesis after log/ln with base { log(x,y }"])
-            (Op ')' : rest') -> (f defaultBase firstNum, rest')
-            _ -> (0, [ErrorToken "[Error 212]: Missing comma or closing parenthesis after log/ln { log(x }"])
+                    (Op ')' : rest') -> (f firstNum secondNum, rest') -- Apply the log function with two arguments.
+                    _ -> (0, [ErrorToken "[Error 211]: Missing closing parenethesis after log with base { log(x,y }"])
+            -- Case for one argument: log(x) or ln(x).
+            (Op ')' : rest') -> (f defaultBase firstNum, rest') -- Apply the log function with the default base.
+            _ -> (0, [ErrorToken "[Error 212]: Missing comma or closing parenthesis after { log(x or ln(x }"])
     _ -> (0, [ErrorToken "[Error 113]: Expected pair of parenthesis after log/ln { log x,y }"])
 
 ------------ Expression Number 2 ------------
--- Helper function to parse Sqrt(_) or Sqrt(_,_)
+-- Parses square root expressions, handling both regular and nth roots.
 parseSqrtWithBase :: [Token] -> (Double, [Token])
 parseSqrtWithBase tokens = case tokens of
     (Op '(' : rest) ->
+        -- Parse the first number (base of the root, if provided).
         let (firstNum, restAfterFirstNum) = parseExpr rest in
         case restAfterFirstNum of
+            -- Case for nth root: √(n, x).
             (Comma : secondNumRest) ->
                 let (secondNum, finalRest) = parseExpr secondNumRest
                 in case finalRest of
                     (Op ')' : rest') -> (secondNum ** (1 / firstNum), rest')  -- nth root of secondNum
                     _ -> (0, [ErrorToken "[Error 213]: Missing closing parenthesis/comma after sqrt with base { √(x,y }"])
+             -- Case for regular square root: √(x).
             (Op ')' : rest') -> (sqrt firstNum, rest')  -- Regular square root
             _ -> (0, [ErrorToken "[Error 214]: Missing closing parenthesis after sqrt { √(x }"])
     _ -> (0, [ErrorToken "[Error 115]: Missing opening parenthesis after sqrt { √ x,y }"])
@@ -535,61 +384,67 @@ parseSqrtWithBase tokens = case tokens of
 -- Handle implicit multiplication around a parenthesis
 parseImplicitMultiplication :: Double -> [Token] -> (Double, [Token])
 parseImplicitMultiplication prevResult tokens = case tokens of
-    (Num n : rest) -> let (nextFactorResult, finalRest) = parseFactor (Num n : rest)
-                      in (prevResult * nextFactorResult, finalRest)
-    _ -> (prevResult, tokens)
+    (Num n : rest) -> -- If a number follows, multiply it with the previous result.
+        let (nextFactorResult, finalRest) = parseFactor (Num n : rest)
+        in (prevResult * nextFactorResult, finalRest)
+    _ -> (prevResult, tokens) -- No number following, return the previous result as is.
 
 ------------ Expression Number 4 ------------
 -- Handle the factorial operator
-factorial :: Integer -> Maybe Integer
+factorial :: Integer -> Maybe Integer -- Calculates the factorial of a given integer.
 factorial n
-  | n < 0     = Nothing
-  | n > 29    = Nothing
-  | n == 0    = Just 1
-  | otherwise = fmap (n *) (factorial (n - 1))
+  | n < 0     = Nothing -- Factorial is not defined for negative numbers.
+  | n > 29    = Nothing -- Limit set to avoid integer overflow (can be adjusted).
+  | n == 0    = Just 1  -- Base case: 0! = 1.
+  | otherwise = fmap (n *) (factorial (n - 1)) -- Recursive calculation of factorial.
 
 ------------ Expression Number 5 ------------
--- Make sure the calculator won't fail with too large of an output
+-- Defines an upper limit for the calculator to prevent overflow issues.
 upperLimit :: Double
-upperLimit = 1e30  -- Example limit, adjust as needed
+upperLimit = 1e30  -- Said limit, adjusted as needed
 
 ------------ Expression Number 6 ------------
--- Helper function to format output
+-- Formats the output of a calculation, converting it into a String.
 formatOutput :: Double -> String
 formatOutput num =
-    if fromIntegral (floor num) == num
-    then show (floor num)  -- Whole number
-    else show num          -- Double
+    if fromIntegral (floor num) == num -- Check if the result is a whole number and display accordingly.
+    then show (floor num)  -- If whole number, display without decimal.
+    else show num          -- If not, display as a floating-point number.
 
 ------------ Expression Number 7 ------------
+-- Checks if a given string represents an error message.
 isError :: String -> Bool
-isError = isPrefixOf "[Error"
+isError = isPrefixOf "[Error" -- Error messages start with "[Error".
 
 ------------ Expression Number 8 ------------
+-- Introduces a delay in the program's execution.
 delay :: Int -> IO ()
-delay ms = threadDelay (ms * 1400)
+delay ms = threadDelay (ms * 1400) -- Delay in milliseconds.
 
 ------------ Expression Number 9 ------------
+-- Replaces occurrences of a substring within a string with another substring.
 replace :: String -> String -> String -> String
-replace old new = intercalate new . splitOn old
+replace old new = intercalate new . splitOn old -- Uses split and intercalate to perform replacement.
 
 ------------ Expression Number 10 ------------
--- Add a horizontal spacer
+-- Creates a horizontal spacer widget in the UI.
 hSpacer :: Double -> WidgetNode s e
-hSpacer size = spacer `styleBasic` [width size]
+hSpacer size = spacer `styleBasic` [width size] -- Sets the width of the spacer.
 
 ------------ Expression Number 11 ------------
--- Add a vertical spacer
+-- Creates a vertical spacer widget in the UI.
 vSpacer :: Double -> WidgetNode s e
-vSpacer size = spacer `styleBasic` [height size]
+vSpacer size = spacer `styleBasic` [height size] -- Sets the height of the spacer.
 
 ------------ Expression Number 12 ------------
+-- String constant representing a special mode in the calculator.
 funModeMarker :: String
-funModeMarker = "       !!!Polonsky Mode!!!"
+funModeMarker = "       !!!Polonsky Mode!!!" -- Used to identify Polonsky Mode.
 
 ------------ Expression Number 13 ------------
-inputLabelStyle :: [TextStyle]
-inputLabelStyle = [textColor white, textSize 24, textFont "Bold"]
+-- Defines styling settings for text elements in the UI.
+inputLabelStyle :: [TextStyle] 
+inputLabelStyle = [textColor white, textSize 24, textFont "Bold"] -- Sets text color, size, and font.
 
 {-
 -----------------------------------------------------------------------------
@@ -639,29 +494,33 @@ inputLabelStyle = [textColor white, textSize 24, textFont "Bold"]
 -}
 
 ------------ Expression Number 1 ------------
--- Function to evaluate a string expression and make sure the output is not too large
-evaluateExpression :: String -> String
+-- Evaluates a mathematical expression given as a string.
+-- It tokenizes the input, evaluates it, and ensures the result is within a numeric limit.evaluateExpression :: String -> String
 evaluateExpression input =
-    let tokens = tokenize input
-        resultString = eval tokens
+    let tokens = tokenize input -- Tokenize the input string.
+        resultString = eval tokens -- Evaluate the tokens.
     in case readMaybe resultString :: Maybe Double of
         Just result -> if result > upperLimit
-                       then "[Error 100]: Too big!"
-                       else formatOutput result
+                       then "[Error 100]: Too big!" -- Check if result exceeds the upper limit.
+                       else formatOutput result -- Format the result for display.
         Nothing -> resultString -- If it's not a number, it's an error message
 
 ------------ Expression Number 2 ------------
+-- Constructs the user interface for the calculator.
 buildUI :: WidgetEnv AppModel AppEvent -> AppModel -> WidgetNode AppModel AppEvent
 buildUI wenv model = widgetTree where
+
+     ---- Additional UI setup code and style definitions ----
     polonskyModeStyle = [textColor red, textSize 45, textFont "Italic"]
     isFunMode = funModeMarker `isInfixOf` (unpack $ model ^. currentInput)
-  
+    
     funModeLabel = label (pack (if isFunMode then funModeMarker else "")) `styleBasic` polonskyModeStyle 
-
+    
     displayInput = if isFunMode 
                    then replace funModeMarker "" (unpack $ model ^. currentInput) 
                    else unpack $ model ^. currentInput
     
+    -- Assemble the UI elements into a vertical stack.
     widgetTree = vstack [
         label (pack displayInput),
         funModeLabel,
@@ -677,7 +536,7 @@ buildUI wenv model = widgetTree where
     redCircularButtonStyle =    [radius 60, width 120, height 120, padding 5, textSize 45, bgColor red, textColor black, textFont "Medium"]
     wideCircularButtonStyle =   [radius 60, width 250, height 120, padding 5, textSize 45, bgColor black, textColor white, textFont "Medium"]
 
-    -- Standard Buttons with Circular Style
+    -- Define different button layouts for standard and fun mode.
     standardbuttons = vstack [
             hstack [button "AC" Clear `styleBasic` greyCircularButtonStyle,             hSpacer 10,         button "fun" ToggleFun `styleBasic` greyCircularButtonStyle,    hSpacer 10,         button "x^2" (AddFunction "^(2)") `styleBasic` greyCircularButtonStyle,     hSpacer 10,         button "÷" (AddOperation '÷') `styleBasic` orangeCircularButtonStyle],
             vSpacer 10,
@@ -690,7 +549,7 @@ buildUI wenv model = widgetTree where
             hstack [button "0" (AddDigit '0') `styleBasic` wideCircularButtonStyle,     hSpacer 10,                                                                                             button "." (AddOperation '.') `styleBasic` circularButtonStyle,             hSpacer 10,         button "=" Calculate `styleBasic` orangeCircularButtonStyle]
         ]
 
-    -- Fun Mode Buttons with Circular Style
+    -- Define different button layouts for standard and fun mode.
     funModebuttons = vstack [
             hstack [button "AC" Clear `styleBasic` circularButtonStyle,                 hSpacer 10,         button "fun" ToggleFun `styleBasic` circularButtonStyle,            hSpacer 10,         button "(" (AddOperation '(') `styleBasic` greyCircularButtonStyle,         hSpacer 10,         button ")" (AddOperation ')') `styleBasic` greyCircularButtonStyle],
             vSpacer 10,
@@ -704,14 +563,14 @@ buildUI wenv model = widgetTree where
         ]
 
 ------------ Expression Number 3 ------------
--- Handling events
+-- Handles different events in the calculator application.
 handleEvent :: WidgetEnv AppModel AppEvent -> WidgetNode AppModel AppEvent -> AppModel -> AppEvent -> [AppEventResponse AppModel AppEvent]
 handleEvent wenv node model evt = case evt of
-    AddDigit digit  ->  [Model $ model & currentInput <>~ pack [digit]]
-    AddOperation op ->  [Model $ model & currentInput <>~ pack [op]]
-    AddFunction func -> [Model $ model & currentInput <>~ pack func]
+    AddDigit digit  ->  [Model $ model & currentInput <>~ pack [digit]] -- Add a digit to the current input.
+    AddOperation op ->  [Model $ model & currentInput <>~ pack [op]]    -- Add an operation to the current input.
+    AddFunction func -> [Model $ model & currentInput <>~ pack func]    -- Add a function to the current input.
 
-    Calculate ->
+    Calculate ->  -- Perform calculation based on the current input.
         let input = unpack $ model ^. currentInput
             cleanedInput = removePolonskyMode input -- Remove "Polonsky Mode" from input
             output = evaluateExpression cleanedInput
@@ -727,37 +586,37 @@ handleEvent wenv node model evt = case evt of
                     return TimerEvent  -- Trigger TimerEvent after the delay
                 ]
 
-    ToggleFun ->
+    ToggleFun -> -- Toggle the special 'Fun Mode'.
         let currentInputText = unpack (model ^. currentInput)
             newInputText = if funModeMarker `isInfixOf` currentInputText
                            then replace funModeMarker "" currentInputText
                            else currentInputText ++ funModeMarker
         in [Model $ model & currentInput .~ pack newInputText]
 
-    HistoryUp ->
+    HistoryUp -> -- Navigate up in the history.
         [ Task $ do
             history <- readValidInputs "validInputs.txt"
             let updatedInput = navigateHistory history (removePolonskyMode $ unpack $ model ^. currentInput) True
             return $ SetInput (if funModeMarker `isInfixOf` unpack (model ^. currentInput) then updatedInput ++ funModeMarker else updatedInput)
         ]
 
-    HistoryDown ->
+    HistoryDown -> -- Navigate down in the history.
         [ Task $ do
             history <- readValidInputs "validInputs.txt"
             let updatedInput = navigateHistory history (removePolonskyMode $ unpack $ model ^. currentInput) False
             return $ SetInput (if funModeMarker `isInfixOf` unpack (model ^. currentInput) then updatedInput ++ funModeMarker else updatedInput)
         ]
     
-    SetInput input ->   [Model $ model & currentInput .~ pack input]
-    NoOp ->             []  -- Handle NoOp event by doing nothing
-    TimerEvent ->       [Model $ model & currentInput .~ ""]
-    Clear ->            [Model $ model & currentInput .~ ""]
-    ClearMem ->         [Task $ liftIO (writeFile "validInputs.txt" "") >> return NoOp]  -- Clear the file content
+    SetInput input ->   [Model $ model & currentInput .~ pack input]    -- Set the input to a specific value.
+    NoOp ->             []                                              -- Do nothing for NoOp events.
+    TimerEvent ->       [Model $ model & currentInput .~ ""]            -- Clear the current input on a TimerEvent.
+    Clear ->            [Model $ model & currentInput .~ ""]            -- Clear the current input.
+    ClearMem ->         [Task $ liftIO (writeFile "validInputs.txt" "") >> return NoOp]  -- Clear the memory file.
 
 ------------ Expression Number 4 ------------
-main :: IO ()
+main :: IO () -- The main entry point of the program.
 main = startApp model handleEvent buildUI config where
-config = [  
+config = [ -- Configuration for the application window (title, icon, theme, fonts, etc.).
     appWindowTitle       "Polonsky's Big Brain Calculator",
     appWindowIcon        "./assets/images/calculator.png",
     appTheme darkTheme,
@@ -768,4 +627,4 @@ config = [
     appWindowResizable True,
     appWindowBorder True
     ]
-model = AppModel ""
+model = AppModel "" -- Initial model of the application.
