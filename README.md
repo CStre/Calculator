@@ -2,13 +2,14 @@
 ## *Pseudocode Project Outline*
 ### Application Model and Events
 #### AppModel:
-##### newtype AppModel = AppModel { _currentInput :: Text }
+<details>
+<summary>##### newtype AppModel = AppModel { _currentInput :: Text } </summary>
 * AppModel represents the state of the application. In the context of this calculator application, it specifically keeps track of the user's input at any given moment.
 * The model is integral to the operation of the Monomer library, which is used for building the GUI.
+</details>
 
 #### AppEvent:
 ##### data AppEvent = AddDigit Char | AddOperation Char | AddFunction String | Calculate | Clear | TimerEvent | NoOp | ClearMem | HistoryUp | HistoryDown | ToggleFun | SetInput String
-     deriving (Eq, Show)
 * **AddDigit Char:** The Char parameter signifies the digit to be added.
 * **AddOperation Char:** Arithmetic operation (like +, -, ×, ÷) is added. The operation is passed as a Char.
 * **AddFunction String:** A mathematical function like (sin, cos, log) is added. 
@@ -24,7 +25,6 @@
 #### Tokenization and Parsing
 ##### Token:
 ##### data Token = Num Double | Op Char | Sqrt | Cos | Tan | Sin | Log | Ln | E | Abs | Comma | Pi | Exp | Fact | Mod | ErrorToken String
-     deriving Show
 * **Num Double:** Represents a numerical value. 
 * **Op Char:** Represents an operator, such as *'+', '-', '×', '÷', etc.*
 * **Sqrt:** Symbolizes the square root operation. 
