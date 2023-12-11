@@ -17,7 +17,7 @@
 ## Acknowledgments
 ### This project utilizes the [Monomer library](https://github.com/fjvallarino/monomer), a powerful and flexible GUI library for Haskell. Big thanks to [Francisco Vallarino](https://github.com/fjvallarino) and the contributors for developing and maintaining this library.
 
-## *Pseudocode Project Outline*
+## Pseudocode Project Outline
 ### Application Model and Events
 #### AppModel:
 ##### newtype AppModel = AppModel { _currentInput :: Text }
