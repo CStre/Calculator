@@ -448,48 +448,17 @@ inputLabelStyle = [textColor white, textSize 24, textFont "Bold"] -- Sets text c
 
 {-
 -----------------------------------------------------------------------------
+                    
+                    
+                    
+                    
+                    
                     -- GUI Components and Event Handling  --
------------------------------------------------------------------------------
 
-1.  evaluateExpression :: String -> String
 
-    The evaluateExpression function serves as the core component for processing 
-    and evaluating mathematical expressions input by the user. It takes a string 
-    as input, tokenizes it into a list of mathematical tokens using the tokenize 
-    function, and then evaluates these tokens to a result string with the eval 
-    function. This function also checks if the result is within a predefined numeric 
-    limit, returning a formatted output or an error message accordingly.
 
-2.  buildUI :: WidgetEnv AppModel AppEvent -> AppModel -> WidgetNode AppModel AppEvent
 
-    The buildUI function is responsible for creating the user interface of a 
-    calculator application. It constructs a graphical interface using the Monomer 
-    library, which includes input fields to display and enter mathematical expressions, 
-    as well as buttons for digits, operators, and functions. The function also dynamically 
-    adjusts the UI to indicate when the calculator is in "Polonsky Mode," a special mode 
-    for advanced functions.
-
-3.  handleEvent :: WidgetEnv AppModel AppEvent -> WidgetNode AppModel AppEvent -> 
-    AppModel -> AppEvent -> [AppEventResponse AppModel AppEvent]
-
-    The handleEvent function in the provided code is responsible for processing 
-    and responding to various events triggered in the calculator application. 
-    It takes the current widget environment, widget node, the application model, 
-    and the incoming event as inputs. Depending on the type of event, it can 
-    update the calculator's input, perform calculations, toggle between standard 
-    and "Polonsky Mode," and handle other actions such as clearing the input or 
-    navigating the history of inputs. It also handles the appending of valid inputs 
-    to a file and includes a delay for certain events.
-
-4.  main :: IO ()
-
-    The main :: IO() function is the entry point of the Haskell program. It sets up 
-    the graphical user interface (GUI) for a calculator application, defines the model 
-    and event handling functions, and runs the Monomer framework to start the 
-    interactive calculator. The GUI displays a calculator interface with buttons 
-    for numbers, operations, and functions, and it responds to user input, updating the 
-    calculator's state and displaying results in real-time.
-
+                    
 -----------------------------------------------------------------------------
 -}
 
