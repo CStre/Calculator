@@ -80,7 +80,7 @@ data AppEvent = AddDigit Char       -- Digit is added to expression
               | HistoryDown         -- This is used to look down from memory
               | ToggleFun           -- Toggle for the special Polonsky Mode
               | SetInput String     -- Used to set the input to a specific thing
-  deriving (Eq, Show)
+        deriving (Eq, Show)
 
 {-
 -----------------------------------------------------------------------------
@@ -124,32 +124,26 @@ application.
 tokenize :: String -> [Token]
 tokenize [] = []
 tokenize str@(c:cs)
-    | c == '.' = -- Handle cases where the string starts with a decimal point
-        if null cs
-        then [Num 0.0]  -- If the string is just a period, return 0.0
-        else if isFunctionStart (head cs) -- Check if the character following the period is the start of a function
-             then ErrorToken "[Error 303]: Invalid use of '.' before a function or symbol" : tokenize cs -- Return an error if a period is improperly used before a function
-             else let correctedStr = if isDigit (head cs) then '0':str else str  -- Prepend '0' to the string if the next character is a digit
-                      (num, rest) = span (\x -> isDigit x || x == '.') correctedStr -- Extract number and remaining string
-                      dotCount = length $ filter (== '.') num -- Count number of decimal points in the number
-                  in if dotCount == 1
-                     then Num (read num) : tokenize rest -- If only one decimal point, return the number and tokenize the rest
-                     else [ErrorToken "[Error 302.1]: Invalid number format. Multiple decimal points detected."] -- If multiple decimal points, return an error
-    | isDigit c || (c == '-' && isDigit (head cs)) = -- Handle cases where the string starts with a digit or a negative sign followed by a digit
-        let (num, rest) = span (\x -> isDigit x || x == '.') str
-            dotCount = length $ filter (== '.') num
-        in if dotCount <= 1
-           then Num (read num) : tokenize rest
-           else [ErrorToken "[Error 302.2]: Invalid number format. Multiple decimal points detected."]
-    | isSpace c = tokenize cs -- Skip spaces
-    | c == '+' = Op '+' : tokenize cs -- Tokenize operators
+    | c == '.' && null cs = [ErrorToken "[Error 302]: Lone decimal point without digits { x._ }"]
+    | c == '.' && isDigit (head cs) =
+        let (num, rest) = span (\x -> isDigit x || x == '.') ('0':str) in Num (read num) : tokenize rest  -- Case _.x: Prepends '0' to form a valid number.
+    | isDigit c || (c == '.' && isDigit (head cs)) =
+        let (num, rest) = span (\x -> isDigit x || x == '.') str in -- Case xy or .x: String starts with a digit or a decimal followed by a digit.
+        if countDots num > 1 -- Check for multiple dots in a number.
+        then [ErrorToken "[Error 304]: Multiple dots in number { x.y.z }"]
+        else if last num == '.' -- Check for dot not followed by a number.
+             then Num (read (num ++ "0")) : tokenize rest
+             else Num (read num) : tokenize rest
+    | c == '.' = [ErrorToken "[Error 303]: Decimal point preceding a function or symbol { .f(x) or .!}"] -- Case .f(x): Decimal point directly before a function or symbol.
+    | isSpace c = tokenize cs
+    | c == '+' = Op '+' : tokenize cs
     | c == '-' = Op '-' : tokenize cs
     | c == '×' = Op '×' : tokenize cs
     | c == '÷' = Op '÷' : tokenize cs
     | c == '(' = Op '(' : tokenize cs
     | c == ')' = Op ')' : tokenize cs
     | c == '%' = Mod    : tokenize cs
-    | take 1 str == "π"     = Pi    : tokenize (drop 1 str) -- Tokenize constants and functions
+    | take 1 str == "π"     = Pi    : tokenize (drop 1 str)
     | take 1 str == ","     = Comma : tokenize (drop 1 str)
     | take 1 str == "√"     = Sqrt  : tokenize (drop 1 str)
     | take 3 str == "cos"   = Cos   : tokenize (drop 3 str)
@@ -161,10 +155,9 @@ tokenize str@(c:cs)
     | take 1 str == "e"     = E     : tokenize (drop 1 str)
     | take 1 str == "^"     = Exp   : tokenize (drop 1 str)
     | take 1 str == "!"     = Fact  : tokenize (drop 1 str)
-    | otherwise = [ErrorToken "[Error 201]: Unrecognized input symbol and not able to tokenize"] -- Handle errors or unrecognized symbols
-    where
-        isFunctionStart :: Char -> Bool -- Define function start characters for . symbol
-        isFunctionStart x = any (x ==) ['+', '-', '×', '÷', '(', ')', '%', 'π', ',', '√', 'c', 't', 's', 'l', 'a', 'e', '^', '!']
+    | otherwise = [ErrorToken "[Error 201]: Unrecognized input symbol and not able to tokenize"] -- ErrorToken is a new constructor in Token data type
+    where -- Helper function to count dots in a string.
+        countDots = length . filter (== '.')
 
 {-
 -----------------------------------------------------------------------------
