@@ -6,6 +6,17 @@
 1. #### Compile the program using `stack build`.
 2. #### Run the compiled application with `.stack-work/dist/x86_64-linux/Cabal-3.6.3.0/build/app/app`.
 
+## Setting Up Monomer on Windows
+#### To set up Monomer on a Windows computer, follow these steps:
+
+1. #### Ensure you have the latest version of Haskell Stack installed. You can download it from [here](https://docs.haskellstack.org/en/stable/README/).
+2. #### Clone the Monomer repository using `git clone https://github.com/fjvallarino/monomer`.
+3. #### Navigate to the cloned directory and build the project using Stack: `stack build`.
+4. #### Once built, you can start working on your Monomer-based projects.
+
+## Acknowledgments
+### This project utilizes the [Monomer library](https://github.com/fjvallarino/monomer), a powerful and flexible GUI library for Haskell. Big thanks to [Francisco Vallarino](https://github.com/fjvallarino) and the contributors for developing and maintaining this library.
+
 ## *Pseudocode Project Outline*
 ### Application Model and Events
 #### AppModel:
