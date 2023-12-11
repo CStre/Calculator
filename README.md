@@ -1,4 +1,11 @@
 # **Haskell Advanced Calculator**
+
+#### This Haskell Advanced Calculator is a comprehensive, GUI-based calculator application developed using the Monomer library in Haskell. It supports a wide range of mathematical operations, including basic arithmetic, trigonometric functions, logarithms, and more. With an intuitive user interface and advanced features like history navigation and a special Polonsky Mode, this calculator stands out as a versatile tool for various mathematical calculations.
+
+### How to Run:
+1. ## Compile the program using `stack build`.
+2. ## Run the compiled application with `.stack-work/dist/x86_64-linux/Cabal-3.6.3.0/build/app/app`.
+
 ## *Pseudocode Project Outline*
 ### Application Model and Events
 #### AppModel:
