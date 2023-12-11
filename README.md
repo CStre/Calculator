@@ -2,11 +2,9 @@
 ## *Pseudocode Project Outline*
 ### Application Model and Events
 #### AppModel:
-<details>
-<summary><b>newtype AppModel = AppModel { _currentInput :: Text }</b></summary>
-- AppModel represents the state of the application. In the context of this calculator application, it specifically keeps track of the user's input at any given moment.
-- The model is integral to the operation of the Monomer library, which is used for building the GUI.
-</details>
+##### newtype AppModel = AppModel { _currentInput :: Text }
+* AppModel represents the state of the application. In the context of this calculator application, it specifically keeps track of the user's input at any given moment.
+* The model is integral to the operation of the Monomer library, which is used for building the GUI.
 
 #### AppEvent:
 ##### data AppEvent = AddDigit Char | AddOperation Char | AddFunction String | Calculate | Clear | TimerEvent | NoOp | ClearMem | HistoryUp | HistoryDown | ToggleFun | SetInput String
