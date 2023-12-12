@@ -44,6 +44,12 @@ import qualified Monomer.Lens as L                      -- (19) For more lens op
 import Monomer.Event.Lens (HasRightShift(rightShift))   -- (20) For handling specific event-related lens operations in Monomer, possibly a dependency.
 import System.Directory (doesFileExist)                 -- (21) For checking the existence of files, used in 'appendToFile', 'readValidInputs'.
 import System.IO (writeFile)                            -- (22) For writing data to files, used in 'appendToFile', 'readValidInputs'.
+import Monomer.Main.Platform (defaultWindowSize)        -- (23) This is used to define the size of the window
+import Monomer.Main.Types (MainWindowState)             -- (24) This is used to define the size of the window
+import Monomer.Core.WidgetTypes
+import Monomer.Main.UserUtil
+
+
 
 {-
 -----------------------------------------------------------------------------
@@ -60,8 +66,9 @@ import System.IO (writeFile)                            -- (22) For writing data
     changes in the model trigger updates in the user interface.
 -----------------------------------------------------------------------------
 -}
-newtype AppModel = AppModel {
-  _currentInput :: Text
+data AppModel = AppModel {
+  _currentInput :: Text,
+  _shouldExit :: Bool
 } deriving (Eq, Show)
 
 makeLenses 'AppModel
@@ -86,6 +93,9 @@ data AppEvent = AddDigit Char       -- Digit is added to expression
               | HistoryDown         -- This is used to look down from memory
               | ToggleFun           -- Toggle for the special Polonsky Mode
               | SetInput String     -- Used to set the input to a specific thing
+              | ExitApp             -- 
+              | CloseApp            --
+              | InitiateExit
         deriving (Eq, Show)
 
 {-
@@ -316,6 +326,7 @@ readValidInputs filePath = do -- Check if the file exists. If not, create an emp
 removePolonskyMode :: String -> String -- Removes a specific marker (Polonsky Mode) from the input string.
 removePolonskyMode input = replace "       !!!Polonsky Mode!!!" "" input
 -- This function is used to clean up the input string before it is evaluated or stored.
+
 ------------ Expression Number 4 ------------
 navigateHistory :: [String] -> String -> Bool -> String -- Navigates through the input history of the calculator application.
 navigateHistory history currentInput isUp =
@@ -419,7 +430,7 @@ isError = isPrefixOf "[Error" -- Error messages start with "[Error".
 ------------ Expression Number 8 ------------
 -- Introduces a delay in the program's execution.
 delay :: Int -> IO ()
-delay ms = threadDelay (ms * 1400) -- Delay in milliseconds.
+delay ms = threadDelay (ms * 1000) -- Delay in milliseconds.
 
 ------------ Expression Number 9 ------------
 -- Replaces occurrences of a substring within a string with another substring.
@@ -443,8 +454,8 @@ funModeMarker = "       !!!Polonsky Mode!!!" -- Used to identify Polonsky Mode.
 
 ------------ Expression Number 13 ------------
 -- Defines styling settings for text elements in the UI.
-inputLabelStyle :: [TextStyle] 
-inputLabelStyle = [textColor white, textSize 24, textFont "Bold"] -- Sets text color, size, and font.
+inputTextStyle :: [StyleState]
+inputTextStyle = [textColor black, textSize 30] -- Sets text color, size, and font.
 
 {-
 -----------------------------------------------------------------------------
@@ -479,7 +490,15 @@ evaluateExpression input =
 buildUI :: WidgetEnv AppModel AppEvent -> AppModel -> WidgetNode AppModel AppEvent
 buildUI wenv model = widgetTree where
 
-     ---- Additional UI setup code and style definitions ----
+    ---- Additional UI setup code and style definitions ----
+    
+    -- Define cleanedInput by removing "!!!Polonsky Mode!!!" if it exists
+    cleanedInput = if funModeMarker `isInfixOf` (unpack $ model ^. currentInput)
+                then replace funModeMarker "" (unpack $ model ^. currentInput)
+                else unpack $ model ^. currentInput
+    
+    currentInputText = label (pack cleanedInput) `styleBasic` inputTextStyle
+    
     polonskyModeStyle = [textColor red, textSize 45, textFont "Italic"]
     isFunMode = funModeMarker `isInfixOf` (unpack $ model ^. currentInput)
     
@@ -487,11 +506,13 @@ buildUI wenv model = widgetTree where
     
     displayInput = if isFunMode 
                    then replace funModeMarker "" (unpack $ model ^. currentInput) 
-                   else unpack $ model ^. currentInput
+                   else unpack $ model ^. currentInput 
     
     -- Assemble the UI elements into a vertical stack.
     widgetTree = vstack [
-        label (pack displayInput),
+        vSpacer 30,
+        currentInputText,
+        vSpacer 10,
         funModeLabel,
         if not isFunMode
         then standardbuttons
@@ -504,6 +525,7 @@ buildUI wenv model = widgetTree where
     greyCircularButtonStyle =   [radius 60, width 120, height 120, padding 5, textSize 45, bgColor gray, textColor black, textFont "Medium"]
     redCircularButtonStyle =    [radius 60, width 120, height 120, padding 5, textSize 45, bgColor red, textColor black, textFont "Medium"]
     wideCircularButtonStyle =   [radius 60, width 250, height 120, padding 5, textSize 45, bgColor black, textColor white, textFont "Medium"]
+    exitButton =                [radius 60, width 250, height 80, padding 5, textSize 45, bgColor green, textColor white, textFont "Medium"]
 
     -- Define different button layouts for standard and fun mode.
     standardbuttons = vstack [
@@ -515,7 +537,9 @@ buildUI wenv model = widgetTree where
             vSpacer 10,
             hstack [button "1" (AddDigit '1') `styleBasic` circularButtonStyle,         hSpacer 10,         button "2" (AddDigit '2') `styleBasic` circularButtonStyle,     hSpacer 10,         button "3" (AddDigit '3') `styleBasic` circularButtonStyle,                 hSpacer 10,         button "+" (AddOperation '+') `styleBasic` orangeCircularButtonStyle],
             vSpacer 10,
-            hstack [button "0" (AddDigit '0') `styleBasic` wideCircularButtonStyle,     hSpacer 10,                                                                                             button "." (AddOperation '.') `styleBasic` circularButtonStyle,             hSpacer 10,         button "=" Calculate `styleBasic` orangeCircularButtonStyle]
+            hstack [button "0" (AddDigit '0') `styleBasic` wideCircularButtonStyle,     hSpacer 10,                                                                                             button "." (AddOperation '.') `styleBasic` circularButtonStyle,             hSpacer 10,         button "=" Calculate `styleBasic` orangeCircularButtonStyle],
+            vSpacer 20,
+            hstack [hSpacer 130, button "Done" ExitApp `styleBasic` exitButton, hSpacer 100]
         ]
 
     -- Define different button layouts for standard and fun mode.
@@ -528,7 +552,9 @@ buildUI wenv model = widgetTree where
             vSpacer 10,
             hstack [button "abs" (AddFunction "abs(") `styleBasic` circularButtonStyle, hSpacer 10,         button "π" (AddFunction "π") `styleBasic` circularButtonStyle,      hSpacer 10,         button "," (AddFunction ", ") `styleBasic` circularButtonStyle,             hSpacer 10,         button "tan" (AddFunction "tan(") `styleBasic` orangeCircularButtonStyle],
             vSpacer 10,
-            hstack [button "cmem" ClearMem `styleBasic` redCircularButtonStyle,         hSpacer 10,         button "Λ" HistoryDown `styleBasic` redCircularButtonStyle,         hSpacer 10,         button "V" HistoryUp `styleBasic` redCircularButtonStyle,                   hSpacer 10,         button "=" Calculate `styleBasic` orangeCircularButtonStyle]
+            hstack [button "cmem" ClearMem `styleBasic` redCircularButtonStyle,         hSpacer 10,         button "Λ" HistoryDown `styleBasic` redCircularButtonStyle,         hSpacer 10,         button "V" HistoryUp `styleBasic` redCircularButtonStyle,                   hSpacer 10,         button "=" Calculate `styleBasic` orangeCircularButtonStyle],
+            vSpacer 20,
+            hstack [hSpacer 130, button "Done" ExitApp `styleBasic` exitButton, hSpacer 100]
         ]
 
 ------------ Expression Number 3 ------------
@@ -551,7 +577,7 @@ handleEvent wenv node model evt = case evt of
                 ]
         else [ Model $ model & currentInput .~ pack output
                 , Task $ do
-                    delay 2400  -- Wait for 2400 ms (2.4 seconds)
+                    delay 2000  -- Wait for 2000 ms (2 seconds)
                     return TimerEvent  -- Trigger TimerEvent after the delay
                 ]
 
@@ -576,24 +602,41 @@ handleEvent wenv node model evt = case evt of
             return $ SetInput (if funModeMarker `isInfixOf` unpack (model ^. currentInput) then updatedInput ++ funModeMarker else updatedInput)
         ]
     
+    ExitApp -> 
+        [ Model $ model & currentInput .~ "Goodbye!"
+        , Task $ do
+            delay 2000
+            return InitiateExit
+        ]
+    
+    InitiateExit -> 
+        [exitApplication] -- Request to exit the application
+    
     SetInput input ->   [Model $ model & currentInput .~ pack input]    -- Set the input to a specific value.
     NoOp ->             []                                              -- Do nothing for NoOp events.
     TimerEvent ->       [Model $ model & currentInput .~ ""]            -- Clear the current input on a TimerEvent.
     Clear ->            [Model $ model & currentInput .~ ""]            -- Clear the current input.
     ClearMem ->         [Task $ liftIO (writeFile "validInputs.txt" "") >> return NoOp]  -- Clear the memory file.
 
+
 ------------ Expression Number 4 ------------
 main :: IO () -- The main entry point of the program.
 main = startApp model handleEvent buildUI config where
-config = [ -- Configuration for the application window (title, icon, theme, fonts, etc.).
-    appWindowTitle       "Polonsky's Big Brain Calculator",
-    appWindowIcon        "./assets/images/calculator.png",
-    appTheme darkTheme,
-    appFontDef "Regular" "./assets/fonts/Roboto-Regular.ttf",
-    appFontDef "Medium"  "./assets/fonts/Roboto-Medium.ttf",
-    appFontDef "Bold"    "./assets/fonts/Roboto-Bold.ttf",
-    appFontDef "Italic"  "./assets/fonts/Roboto-Italic.ttf",
-    appWindowResizable True,
-    appWindowBorder True
-    ]
-model = AppModel "" -- Initial model of the application.
+
+    config = [ -- Configuration for the application window (title, icon, theme, fonts, etc.).
+        appWindowTitle                "Polonsky's Big Brain Calculator",
+        appWindowIcon                 "./assets/images/calculator.png",
+        appTheme darkTheme,
+        appFontDef          "Regular" "./assets/fonts/Roboto-Regular.ttf",
+        appFontDef          "Medium"  "./assets/fonts/Roboto-Medium.ttf",
+        appFontDef          "Bold"    "./assets/fonts/Roboto-Bold.ttf",
+        appFontDef          "Italic"  "./assets/fonts/Roboto-Italic.ttf",
+        appWindowResizable False, -- Cannot resize
+        appWindowBorder False, -- Does not have border
+        appWindowState (MainWindowNormal (550, 890))  -- Set the initial window state to normal with size 600x600
+        ]
+    
+    model = AppModel {
+        _currentInput = "", 
+        _shouldExit = False
+    } -- Initial model of the application.
