@@ -44,10 +44,7 @@ import qualified Monomer.Lens as L                      -- (19) For more lens op
 import Monomer.Event.Lens (HasRightShift(rightShift))   -- (20) For handling specific event-related lens operations in Monomer, possibly a dependency.
 import System.Directory (doesFileExist)                 -- (21) For checking the existence of files, used in 'appendToFile', 'readValidInputs'.
 import System.IO (writeFile)                            -- (22) For writing data to files, used in 'appendToFile', 'readValidInputs'.
-import Monomer.Main.Platform (defaultWindowSize)        -- (23) This is used to define the size of the window
-import Monomer.Main.Types (MainWindowState)             -- (24) This is used to define the size of the window
-import Monomer.Core.WidgetTypes
-import Monomer.Main.UserUtil
+
 
 
 
@@ -67,8 +64,8 @@ import Monomer.Main.UserUtil
 -----------------------------------------------------------------------------
 -}
 data AppModel = AppModel {
-  _currentInput :: Text,
-  _shouldExit :: Bool
+  _currentInput :: Text,    -- For current input
+  _shouldExit :: Bool       -- For the exit event
 } deriving (Eq, Show)
 
 makeLenses 'AppModel
@@ -93,9 +90,8 @@ data AppEvent = AddDigit Char       -- Digit is added to expression
               | HistoryDown         -- This is used to look down from memory
               | ToggleFun           -- Toggle for the special Polonsky Mode
               | SetInput String     -- Used to set the input to a specific thing
-              | ExitApp             -- 
-              | CloseApp            --
-              | InitiateExit
+              | ExitApp             -- Used with the done buttom to display a Goodbye! message and start the timer
+              | InitiateExit        -- Called by the ExitApp event and closes the program
         deriving (Eq, Show)
 
 {-
@@ -154,7 +150,7 @@ tokenize str@(c:cs)
         else if last num == '.' -- Check for dot not followed by a number.
              then Num (read (num ++ "0")) : tokenize rest
              else Num (read num) : tokenize rest
-    | c == '.' = [ErrorToken "[Error 303]: Decimal point preceding a function or symbol { .f(x) or .!}"] -- Case .f(x): Decimal point directly before a function or symbol.
+    | c == '.' = [ErrorToken "[Error 303]: Decimal point preceding function or symbol { .f(x) or .!}"] -- Case .f(x): Decimal point directly before a function or symbol.
     | isSpace c = tokenize cs
     | c == '+' = Op '+' : tokenize cs
     | c == '-' = Op '-' : tokenize cs
@@ -226,7 +222,7 @@ parseProduct tokens =
         (Op '÷' : rest2) -> let (num2, rest3) = parseProduct rest2 in (num1 / num2, rest3)
         (Mod : rest2) ->
             case parseFactor rest2 of -- Handle modulo operation
-                (num2, rest3) | num2 == 0 -> (0, [ErrorToken "[Error 102]: Division by zero in mod not possible { x%0 }"])
+                (num2, rest3) | num2 == 0 -> (0, [ErrorToken "[Error 102]: Division by zero mod not possible { x%0 }"])
                               | otherwise -> (fromIntegral (floor num1 `mod` floor num2), rest3)
         _ -> (num1, rest1) -- No multiplication, division, or modulo, return current results
 
@@ -250,8 +246,8 @@ parseFactor tokens = case tokens of
                 let (expResult, restAfterExp) = parseExpr rest'
                 in case restAfterExp of
                     (Op ')' : restFinal) -> (n ** expResult, restFinal)
-                    _ -> (0, [ErrorToken "[Error 104]: Missing closing parenthesis for exponent operator { x^(x }"])
-            _ -> (0, [ErrorToken "[Error 205]: Expected opening parenthesis after exponent operator { x^ }"])
+                    _ -> (0, [ErrorToken "[Error 104]: Missing parenthesis for exponent operator { x^(x_ }"])
+            _ -> (0, [ErrorToken "[Error 205]: Expected parenthesis after exponent operator { x^_ }"])
     (Op '-' : Num n : Fact : rest) -> (0, [ErrorToken "[Error 106]: Factorial not defined for negative numbers"])   -- Check for ex. -_!
     (Num n : Fact : rest) -> case factorial (round n) of                                                            -- Check for ex. _!
             Just factResult -> (fromIntegral factResult, rest)
@@ -366,11 +362,11 @@ parseLogOrLnWithBase f defaultBase tokens = case tokens of
                 let (secondNum, finalRest) = parseFactor secondNumRest
                 in case finalRest of
                     (Op ')' : rest') -> (f firstNum secondNum, rest') -- Apply the log function with two arguments.
-                    _ -> (0, [ErrorToken "[Error 211]: Missing closing parenethesis after log with base { log(x,y }"])
+                    _ -> (0, [ErrorToken "[Error 211]: Closing parenethesis after log with base { log(x,y }"])
             -- Case for one argument: log(x) or ln(x).
             (Op ')' : rest') -> (f defaultBase firstNum, rest') -- Apply the log function with the default base.
-            _ -> (0, [ErrorToken "[Error 212]: Missing comma or closing parenthesis after { log(x or ln(x }"])
-    _ -> (0, [ErrorToken "[Error 113]: Expected pair of parenthesis after log/ln { log x,y }"])
+            _ -> (0, [ErrorToken "[Error 212]: Comma or parenthesis after { log(x or ln(x }"])
+    _ -> (0, [ErrorToken "[Error 113]: Pair of parenthesis after log/ln { log x,y }"])
 
 ------------ Expression Number 2 ------------
 -- Parses square root expressions, handling both regular and nth roots.
@@ -385,11 +381,11 @@ parseSqrtWithBase tokens = case tokens of
                 let (secondNum, finalRest) = parseExpr secondNumRest
                 in case finalRest of
                     (Op ')' : rest') -> (secondNum ** (1 / firstNum), rest')  -- nth root of secondNum
-                    _ -> (0, [ErrorToken "[Error 213]: Missing closing parenthesis/comma after sqrt with base { √(x,y }"])
+                    _ -> (0, [ErrorToken "[Error 213]: Missing parenthesis/comma after sqrt { √(x,y_ }"])
              -- Case for regular square root: √(x).
             (Op ')' : rest') -> (sqrt firstNum, rest')  -- Regular square root
-            _ -> (0, [ErrorToken "[Error 214]: Missing closing parenthesis after sqrt { √(x }"])
-    _ -> (0, [ErrorToken "[Error 115]: Missing opening parenthesis after sqrt { √ x,y }"])
+            _ -> (0, [ErrorToken "[Error 214]: Missing parenthesis after sqrt { √(x_ }"])
+    _ -> (0, [ErrorToken "[Error 115]: Missing parenthesis after sqrt { √_x,y }"])
 
 ------------ Expression Number 3 ------------
 -- Handle implicit multiplication around a parenthesis
@@ -455,7 +451,7 @@ funModeMarker = "       !!!Polonsky Mode!!!" -- Used to identify Polonsky Mode.
 ------------ Expression Number 13 ------------
 -- Defines styling settings for text elements in the UI.
 inputTextStyle :: [StyleState]
-inputTextStyle = [textColor black, textSize 30] -- Sets text color, size, and font.
+inputTextStyle = [textColor black, textSize 15] -- Sets text color, size, and font.
 
 {-
 -----------------------------------------------------------------------------
@@ -481,7 +477,7 @@ evaluateExpression input =
         resultString = eval tokens -- Evaluate the tokens.
     in case readMaybe resultString :: Maybe Double of
         Just result -> if result > upperLimit
-                       then "[Error 100]: Too big!" -- Check if result exceeds the upper limit.
+                       then "[Error 101]: Too big!" -- Check if result exceeds the upper limit.
                        else formatOutput result -- Format the result for display.
         Nothing -> resultString -- If it's not a number, it's an error message
 
@@ -539,7 +535,7 @@ buildUI wenv model = widgetTree where
             vSpacer 10,
             hstack [button "0" (AddDigit '0') `styleBasic` wideCircularButtonStyle,     hSpacer 10,                                                                                             button "." (AddOperation '.') `styleBasic` circularButtonStyle,             hSpacer 10,         button "=" Calculate `styleBasic` orangeCircularButtonStyle],
             vSpacer 20,
-            hstack [hSpacer 130, button "Done" ExitApp `styleBasic` exitButton, hSpacer 100]
+            hstack [                                                                    hSpacer 130,                                                        button "Done" ExitApp `styleBasic` exitButton,                                                                      hSpacer 100]
         ]
 
     -- Define different button layouts for standard and fun mode.
@@ -554,7 +550,7 @@ buildUI wenv model = widgetTree where
             vSpacer 10,
             hstack [button "cmem" ClearMem `styleBasic` redCircularButtonStyle,         hSpacer 10,         button "Λ" HistoryDown `styleBasic` redCircularButtonStyle,         hSpacer 10,         button "V" HistoryUp `styleBasic` redCircularButtonStyle,                   hSpacer 10,         button "=" Calculate `styleBasic` orangeCircularButtonStyle],
             vSpacer 20,
-            hstack [hSpacer 130, button "Done" ExitApp `styleBasic` exitButton, hSpacer 100]
+            hstack [                                                                    hSpacer 130,                                                        button "Done" ExitApp `styleBasic` exitButton,                                                                      hSpacer 100]
         ]
 
 ------------ Expression Number 3 ------------
