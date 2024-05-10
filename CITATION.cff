@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+title: 'Haskell Advanced Calculator '
+message: ' If you use this software in any capacity, please cite it as below.'
+type: software
+authors:
+  - given-names: Collin Michael Streitman
+    family-names: Collin Michael Streitman
+    email: collinm.streitman@gmail.com
+    orcid: 'https://orcid.org/0009-0006-5622-5526'
+identifiers:
+  - type: url
+    value: >-
+      https://github.com/CStre/Calculator/tree/8fae19c94796f44e7ef383d75c6e8b141782cb8c
+    description: This is the main GitHub repository URL
+repository-code: 'https://github.com/CStre/Calculator'
+abstract: >-
+  This Haskell Advanced Calculator is a comprehensive,
+  GUI-based calculator application developed using the
+  Monomer library in Haskell. It supports a wide range of
+  mathematical operations, including basic arithmetic,
+  trigonometric functions, logarithms, and more. With an
+  intuitive user interface and advanced features like
+  history navigation and a special Polonsky Mode, this
+  calculator stands out as a versatile tool for various
+  mathematical calculations.
+keywords:
+  - haskell
+  - ubuntu
+  - functional-programming
+  - cabal
+  - monomer
+license: MIT
+commit: 8fae19c94796f44e7ef383d75c6e8b141782cb8c
+version: 1.2.0
+date-released: '2023-12-12'
