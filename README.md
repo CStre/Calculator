@@ -1,4 +1,8 @@
-# **Haskell Advanced Calculator**
+<p align="center">
+  <img src="./+.png" height="250px" alt="Logo" />
+</p>
+
+<h1 align="center" style="color: #5e5086;">Haskell Advanced Calculator</h1>
 
 #### This Haskell Advanced Calculator is a comprehensive, GUI-based calculator application developed using the Monomer library in Haskell. It supports a wide range of mathematical operations, including basic arithmetic, trigonometric functions, logarithms, and more. With an intuitive user interface and advanced features like history navigation and a special Polonsky Mode, this calculator stands out as a versatile tool for various mathematical calculations.
 
